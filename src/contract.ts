@@ -18,6 +18,7 @@ export type DaylineGlyph = {
   filled?: boolean;
   scheduled?: boolean;
   requested?: boolean;
+  flip180?: boolean;
 };
 
 export type DaylineOccRef = {
@@ -74,7 +75,6 @@ export type DaylineCallbacks = {
 };
 
 export type DaylineMountOptions = {
-  /** wall (default): engine owns now. Do not push now every second. */
   clock?: "wall" | "data";
   nowRestFraction?: number;
   dpr?: number;

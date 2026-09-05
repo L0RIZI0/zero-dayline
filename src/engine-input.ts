@@ -1,10 +1,10 @@
-import { EngineView } from "./engine-view";
+import { EngineLayout } from "./engine-layout";
 import type { CalEvent, EventCategory, EventKind, PlacedChip } from "./types";
 import { MIN_EVENT_MS, MIN_SPAN_MS, MAX_SPAN_MS } from "./types";
 import { clamp, formatRange, HOUR, snapTime } from "./time";
 import { wheelNotches } from "./engine-util";
 
-export class EngineInput extends EngineView {
+export class EngineInput extends EngineLayout {
 onDown = (e: PointerEvent) => {
 if (e.button !== 0 && e.pointerType === "mouse") return;
 try { this.canvas.setPointerCapture(e.pointerId); } catch {}
@@ -435,4 +435,5 @@ if (key === this.lastEmitKey) return;
 this.lastEmitKey = key;
 this.host.onChange(s);
 }
+
 }
