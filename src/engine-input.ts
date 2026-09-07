@@ -37,17 +37,6 @@ this.pinchT = this.xToTime(this.pinchX);
 return;
 }
 const hit = this.hitTest(x, y);
-if (hit.minimap) {
-this.jumpMinimap(x);
-this.mode = "pan";
-this.grabT = this.xToTime(x);
-this.grabX = x;
-this.lastX = x;
-this.lastT = performance.now();
-this.dragSign = 0;
-this.pushVel(x);
-return;
-}
 if (hit.handle && hit.chip && !hit.chip.event.point) {
 this.pushUndo();
 this.mode = hit.handle === "start" ? "resize-start" : "resize-end";
@@ -192,7 +181,7 @@ this.hoverId = hit.chip?.event.id ?? null;
 this.hoverHandle = hit.handle;
 this.sunHover = false;
 this.moonHover = false;
-if (!hit.chip && !hit.minimap && !hit.handle) {
+if (!hit.chip && !hit.handle) {
 const sun = this.hitSun(x, y);
 const moon = this.hitMoon(x, y);
 if (sun && moon) {
@@ -213,7 +202,7 @@ this.moonHover = true;
 this.hoverMoon = moon;
 }
 }
-this.canvas.style.cursor = hit.minimap ? "pointer" : hit.handle ? "ew-resize" : hit.chip ? "grab" : this.sunHover || this.moonHover || this.sunHoverA > .2 || this.moonHoverA > .2 ? "pointer" : "grab";
+this.canvas.style.cursor = hit.handle ? "ew-resize" : hit.chip ? "grab" : this.sunHover || this.moonHover || this.sunHoverA > .2 || this.moonHoverA > .2 ? "pointer" : "grab";
 };
 onUp = (e: PointerEvent) => {
 const { x, y } = this.localXY(e);
@@ -438,12 +427,6 @@ if (ev.mark.occRef !== undefined) {
 this.callbacks.onOccurrenceRetime?.(ev.mark.entityId, ev.mark.occRef, start, end);
 this.noteIntent(`occurrence-retime ${ev.title}`);
 }
-}
-jumpMinimap(x: number) {
-const { min, max } = this.bounds();
-const t = min + x / Math.max(this.width, 1) * (max - min);
-this.noteGesture(x);
-this.springTo(t, this.spanMs);
 }
 emit() {
 const s = this.snapshot();

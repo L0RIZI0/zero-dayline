@@ -108,7 +108,7 @@ const x1 = this.timeToX(e.end);
 const h = e.mark?.kind === "space" ? 26 : 22;
 const recorded = e.track === "recorded";
 const access = e.track === "access";
-const y = access ? ly + 4 : recorded ? ly + 16 + lane * 26 : ly - 28 - lane * 26;
+const y = access ? ly + 4 : recorded ? ly + 8 + lane * 26 : ly - 28 - lane * 26;
 out.push({
 event: e,
 x0,
@@ -129,7 +129,7 @@ let guard = 0;
 while (guard++ < 8) {
 if (!chips.slice(0, i).some((o) => p.x0 < o.x1 - 6 && o.x0 < p.x1 - 6 && Math.abs(o.y - p.y) < p.h - 2)) break;
 p.lane += 1;
-if (p.event.track === "recorded") p.y = ly + 16 + p.lane * 26;
+if (p.event.track === "recorded") p.y = ly + 8 + p.lane * 26;
 else p.y = ly - 28 - p.lane * 26;
 }
 }
@@ -158,11 +158,6 @@ p.lane = parent.lane;
 return out;
 }
 hitTest(x: number, y: number): Hit {
-if (y > this.height - 44) return {
-chip: null,
-handle: null,
-minimap: true
-};
 if (this.selectedId) {
 const sel = this.placed.find((p: PlacedChip) => p.event.id === this.selectedId && !p.clustered);
 if (sel && sel.x1 - sel.x0 > 28) {

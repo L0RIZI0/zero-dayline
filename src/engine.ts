@@ -49,7 +49,6 @@ ctx.fillRect(0, 0, width, height);
 const ly = this.lineY();
 const nowX = this.timeToX(this.now);
 this.drawNowWash(nowX, ly);
-this.drawMinimap();
 if (this.showSun) this.drawSun(ly);
 if (this.showMoon) this.drawMoon(ly);
 this.drawMidnights();
@@ -268,14 +267,14 @@ drawOne(pose.ghost);
 }
 drawNowHead(nowX: number, ly: number) {
 if (nowX < -10 || nowX > this.width + 10) return;
-const { ctx } = this;
+const { ctx, height } = this;
 ctx.save();
 ctx.strokeStyle = C.now;
 ctx.globalAlpha = .55;
 ctx.lineWidth = 1;
 ctx.beginPath();
-ctx.moveTo(nowX + .5, 8);
-ctx.lineTo(nowX + .5, ly + 28);
+ctx.moveTo(nowX + .5, 0);
+ctx.lineTo(nowX + .5, height);
 ctx.stroke();
 ctx.globalAlpha = 1;
 ctx.fillStyle = C.now;
@@ -289,47 +288,14 @@ ctx.restore();
 }
 drawSnap(t: number, ly: number) {
 const x = this.timeToX(t);
-const { ctx } = this;
+const { ctx, height } = this;
 ctx.save();
 ctx.strokeStyle = C.snap;
 ctx.setLineDash([3, 4]);
 ctx.beginPath();
-ctx.moveTo(x + .5, ly - 130);
-ctx.lineTo(x + .5, ly + 36);
+ctx.moveTo(x + .5, 0);
+ctx.lineTo(x + .5, height);
 ctx.stroke();
-ctx.restore();
-}
-drawMinimap() {
-const { ctx, width, height } = this;
-const y = height - 28;
-const h = 14;
-const { min, max } = this.bounds();
-const span = max - min || 1;
-ctx.fillStyle = C.bgElevated;
-roundRect(ctx, 8, y, width - 16, h, 3);
-ctx.fill();
-ctx.save();
-ctx.beginPath();
-roundRect(ctx, 8, y, width - 16, h, 3);
-ctx.clip();
-for (const e of this.events) {
-const x0 = 8 + (e.start - min) / span * (width - 16);
-const x1 = 8 + (e.end - min) / span * (width - 16);
-ctx.fillStyle = this.accentOf(e);
-ctx.globalAlpha = e.kind === "band" ? .28 : .55;
-ctx.fillRect(x0, y + 2, Math.max(1, x1 - x0), 10);
-}
-ctx.globalAlpha = 1;
-const vx0 = 8 + (this.tLeft() - min) / span * (width - 16);
-const vx1 = 8 + (this.tRight() - min) / span * (width - 16);
-ctx.strokeStyle = C.selection;
-ctx.globalAlpha = .7;
-ctx.lineWidth = 1;
-ctx.strokeRect(Math.min(vx0, vx1), y + .5, Math.max(8, Math.abs(vx1 - vx0)), 13);
-const nx = 8 + (this.now - min) / span * (width - 16);
-ctx.globalAlpha = .9;
-ctx.fillStyle = C.now;
-ctx.fillRect(nx - .5, y, 1, h);
 ctx.restore();
 }
 drawHoverTip() {
