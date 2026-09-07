@@ -12,6 +12,39 @@ function clamp(n: number, a: number, b: number) {
   return Math.max(a, Math.min(b, n));
 }
 
+export type Rgb = [number, number, number];
+
+const GOLD: Rgb = [228, 196, 78];
+const RISE: Rgb = [108, 186, 232];
+const SET: Rgb = [214, 86, 158];
+const NIGHT: Rgb = [90, 96, 132];
+
+function lerpRgb(a: Rgb, b: Rgb, t: number): Rgb {
+  const u = clamp(t, 0, 1);
+  return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u];
+}
+
+export function rgbCss(c: Rgb, a = 1): string {
+  return `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+}
+
+/** Golden at noon, sky-blue at sunrise, magenta at sunset. Night is a dim bridge. */
+export function sunRgb(t: number): Rgb {
+  const { rise, set } = sunTimes(t);
+  if (t >= rise && t <= set) {
+    const u = (t - rise) / Math.max(1, set - rise);
+    if (u < 0.5) return lerpRgb(RISE, GOLD, u * 2);
+    return lerpRgb(GOLD, SET, (u - 0.5) * 2);
+  }
+  const prevSet = t < rise ? sunTimes(t - DAY).set : set;
+  const nextRise = t < rise ? rise : sunTimes(t + DAY).rise;
+  const v = (t - prevSet) / Math.max(1, nextRise - prevSet);
+  if (v < 0.5) return lerpRgb(SET, NIGHT, v * 2);
+  return lerpRgb(NIGHT, RISE, (v - 0.5) * 2);
+}
+
+export const SUN_GOLD = GOLD;
+
 const _slot: { sod: number; v: { rise: number; set: number } }[] = [];
 const _moon: { k: number; v: { rise: number; set: number; transit: number } }[] = [];
 

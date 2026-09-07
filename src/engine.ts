@@ -5,6 +5,7 @@ import { C, colorOf, FONT_DISPLAY, FONT_MONO, FONT_UI, inkOn } from "./theme";
 import { clamp, formatHm, formatRange, lerp, smoothstep, DAY } from "./time";
 import { drawGlyph, type GlyphDrawFlags } from "./glyphDraw";
 import { drawHorizonSun, drawHorizonMoon, drawCrescent, roundRect } from "./engine-util";
+import { sunRgb, rgbCss } from "./sun";
 
 export class DaylineEngine extends EngineDraw {
 constructor(canvas: HTMLCanvasElement, host: import("./engine-core").EngineHost, opts: import("./engine-core").EngineOptions = {}) {
@@ -410,7 +411,7 @@ ctx.save();
 ctx.translate(cx, cy);
 ctx.rotate(rot);
 ctx.globalAlpha = a;
-ctx.fillStyle = C.travel;
+ctx.fillStyle = rgbCss(sunRgb(this.xToTime(cx)));
 ctx.beginPath();
 ctx.arc(0, 0, r * 0.4, 0, Math.PI * 2);
 ctx.fill();
