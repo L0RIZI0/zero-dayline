@@ -4,7 +4,7 @@ import type { CalEvent, PlacedChip } from "./types";
 import { C, colorOf, FONT_DISPLAY, FONT_MONO, FONT_UI, inkOn } from "./theme";
 import { clamp, formatHm, formatRange, lerp, smoothstep, DAY } from "./time";
 import { drawGlyph, type GlyphDrawFlags } from "./glyphDraw";
-import { drawHorizonSun, drawHorizonMoon, roundRect } from "./engine-util";
+import { drawHorizonSun, drawHorizonMoon, drawCrescent, roundRect } from "./engine-util";
 
 export class DaylineEngine extends EngineDraw {
 constructor(canvas: HTMLCanvasElement, host: import("./engine-core").EngineHost, opts: import("./engine-core").EngineOptions = {}) {
@@ -502,16 +502,10 @@ ctx.restore();
 drawMoonCursor(cx: number, cy: number) {
 const { ctx } = this;
 const a = smoothstep(this.moonHoverA);
-const r = lerp(10, 13, a);
+const r = lerp(8, 11, a);
 ctx.save();
-ctx.translate(cx, cy);
 ctx.globalAlpha = a;
-ctx.fillStyle = "rgb(140,175,230)";
-ctx.beginPath();
-ctx.arc(0, 0, r * 0.72, 0.7, Math.PI * 2 - 0.55);
-ctx.arc(r * 0.38, -r * 0.1, r * 0.62, Math.PI * 1.15, Math.PI * 0.85, true);
-ctx.closePath();
-ctx.fill();
+drawCrescent(ctx, cx, cy, r, "rgb(168,196,236)", -0.4);
 ctx.restore();
 }
 

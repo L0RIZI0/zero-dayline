@@ -63,6 +63,15 @@ if (best >= thresh) return null;
 const times = timesAt(this.xToTime(bx));
 return { rise: times.rise, set: times.set, px: bx, py: by };
 }
+skyBusy() {
+return (
+this.mode === "pan" ||
+this.mode === "pinch" ||
+this.flickT != null ||
+Math.abs(this.coastPx) > 12 ||
+this.springing
+);
+}
 skyHeights(
 ly: number,
 heightAt: (t: number, kDaily: number) => number,
@@ -76,28 +85,28 @@ const kDaily = clamp((pxPerDay - 4) / 12, 0, 1);
 const cx = width * 0.5;
 const sigma = Math.max(90, width * 0.32);
 const envAt = (x: number) => 0.62 + 0.38 * Math.exp(-0.5 * ((x - cx) / sigma) * ((x - cx) / sigma));
-const extra =
-Math.abs(this.centerT - this.lagCenter) +
-0.55 * Math.abs(this.spanMs - this.lagSpan) +
-spanMs * 0.08;
-const half = Math.max(spanMs, this.lagSpan) * 0.5;
-const tL = Math.min(this.centerT, this.lagCenter) - half - extra;
-const tR = Math.max(this.centerT, this.lagCenter) + half + extra;
+const busy = this.skyBusy();
+const pad = spanMs * 0.1;
+const tL = this.centerT - spanMs * 0.5 - pad;
+const tR = this.centerT + spanMs * 0.5 + pad;
 type P = { t: number; x: number };
 let raw: P[] = [];
-const n0 = Math.min(160, Math.max(48, Math.floor(width / 8)));
+const n0 = busy
+? Math.min(72, Math.max(28, Math.floor(width / 16)))
+: Math.min(140, Math.max(40, Math.floor(width / 9)));
 for (let i = 0; i <= n0; i++) {
 const t = tL + (tR - tL) * (i / n0);
 raw.push({ t, x: this.timeToX(t) });
 }
-if (kDaily > 0.2) {
+if (kDaily > 0.2 && !busy) {
 const extraT = (knots ?? sunKnots)(tL, tR);
 for (const t of extraT) raw.push({ t, x: this.timeToX(t) });
 raw.sort((a, b) => a.t - b.t);
 }
-const MAX_DX = 3;
-const MAX_N = 420;
-for (let pass = 0; pass < 7; pass++) {
+if (!busy) {
+const MAX_DX = 3.2;
+const MAX_N = 280;
+for (let pass = 0; pass < 5; pass++) {
 if (raw.length >= MAX_N) break;
 let grew = false;
 const next: P[] = [raw[0]];
@@ -118,18 +127,24 @@ next.push(b);
 raw = next;
 if (!grew) break;
 }
+}
 const ys: { x: number; y: number }[] = [];
-let lastX = -1e9;
-for (const p of raw) {
-if (Math.abs(p.x - lastX) < 0.35) continue;
-lastX = p.x;
-const h = heightAt(p.t, kDaily);
 const amp = kDaily * ampDay + (1 - kDaily) * ampSeason;
-ys.push({ x: p.x, y: ly - amp * envAt(p.x) * h });
+for (const p of raw) {
+const h = heightAt(p.t, kDaily);
+const y = ly - amp * envAt(p.x) * h;
+if (ys.length) {
+const prev = ys[ys.length - 1];
+if (Math.abs(p.x - prev.x) < 0.45) {
+if (Math.abs(y - ly) > Math.abs(prev.y - ly)) ys[ys.length - 1] = { x: p.x, y };
+continue;
+}
+}
+ys.push({ x: p.x, y });
 }
 return ys;
 }
-paintSkyCurve(ys: { x: number; y: number }[], ly: number, stroke: string, upFill: string, downFill: string, strokeA: number) {
+paintSkyCurve(ys: { x: number; y: number }[], ly: number, stroke: string, upFill: string, downFill: string, strokeA: number, fill = true) {
 const { ctx } = this;
 if (!ys.length) return;
 ctx.save();
@@ -142,7 +157,7 @@ ctx.beginPath();
 ctx.moveTo(ys[0].x, ys[0].y);
 for (let i = 1; i < ys.length; i++) ctx.lineTo(ys[i].x, ys[i].y);
 ctx.stroke();
-if (ys.length > 1) {
+if (fill && ys.length > 1) {
 ctx.beginPath();
 ctx.moveTo(ys[0].x, ly);
 for (const p of ys) ctx.lineTo(p.x, Math.min(p.y, ly));
@@ -175,6 +190,7 @@ C.travel,
 `rgba(154,139,124,${dayFillA})`,
 `rgba(90,96,110,${nightFillA})`,
 strokeA,
+!this.skyBusy(),
 );
 }
 drawMoon(ly: number) {
@@ -191,6 +207,7 @@ ly,
 `rgba(110,150,210,${upFillA})`,
 `rgba(40,60,110,${downFillA})`,
 strokeA,
+!this.skyBusy(),
 );
 }
 drawCoil(ly: number) {

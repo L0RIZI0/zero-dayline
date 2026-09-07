@@ -63,21 +63,29 @@ export function seasonSigned(ms: number): number {
   return clamp((dayLengthFrac(ms) - 0.5) / 0.18, -1, 1);
 }
 
-function moonK(t: number): number {
-  return Math.floor((t - NEW_MOON) / LUNAR_DAY + 0.5);
+function moonKFloor(t: number): number {
+  return Math.floor((t - NEW_MOON) / LUNAR_DAY);
 }
 
-/** One lunar passage (nearest transit). Rise/set are the axis knots. */
-export function moonPassage(t: number): { rise: number; set: number; transit: number } {
-  const k = moonK(t);
-  for (let i = 0; i < _moon.length; i++) if (_moon[i].k === k) return _moon[i].v;
+function passageK(k: number): { k: number; rise: number; set: number; transit: number } {
+  for (let i = 0; i < _moon.length; i++) if (_moon[i].k === k) return { k, ..._moon[i].v };
   const transit = NEW_MOON + k * LUNAR_DAY;
   const dec = Math.sin((2 * Math.PI * (transit - NEW_MOON)) / TROPICAL_MONTH);
   const up = (12.15 + dec * 1.35) * HOUR;
-  const v = { transit, rise: transit - up / 2, set: transit + up / 2 };
-  if (_moon.length >= 8) _moon.shift();
+  const v = { rise: transit - up / 2, set: transit + up / 2, transit };
+  if (_moon.length >= 10) _moon.shift();
   _moon.push({ k, v });
-  return v;
+  return { k, ...v };
+}
+
+/** Passage whose rise/set window contains `t` (or the night after its set). */
+export function moonPassage(t: number): { rise: number; set: number; transit: number } {
+  let k = moonKFloor(t);
+  let p = passageK(k);
+  if (t < p.rise) p = passageK(k - 1);
+  const next = passageK(p.k + 1);
+  if (t >= next.rise) p = next;
+  return p;
 }
 
 export function moonTimes(ms: number): { rise: number; set: number } {
@@ -87,21 +95,21 @@ export function moonTimes(ms: number): { rise: number; set: number } {
 
 /**
  * Same knot rule as the sun: 0 at moonrise / moonset, + when the moon is up,
- * − when it's down. ~50 min later each day (mean lunar day).
+ * − when it's down. C1 at the knots (matching sunUnit).
  */
 export function moonUnit(t: number): number {
-  const cur = moonPassage(t);
-  if (t < cur.rise) {
-    const prev = moonPassage(cur.transit - LUNAR_DAY / 2);
-    const upW = Math.max(1, prev.set - prev.rise);
-    const downW = Math.max(1, cur.rise - prev.set);
-    return -(downW / upW) * sunHeight((t - prev.set) / downW);
+  let k = moonKFloor(t);
+  let p = passageK(k);
+  if (t < p.rise) p = passageK(k - 1);
+  let next = passageK(p.k + 1);
+  if (t >= next.rise) {
+    p = next;
+    next = passageK(p.k + 1);
   }
-  const upW = Math.max(1, cur.set - cur.rise);
-  if (t <= cur.set) return sunHeight((t - cur.rise) / upW);
-  const next = moonPassage(cur.transit + LUNAR_DAY / 2);
-  const downW = Math.max(1, next.rise - cur.set);
-  return -(downW / upW) * sunHeight((t - cur.set) / downW);
+  const upW = Math.max(1, p.set - p.rise);
+  if (t <= p.set) return sunHeight((t - p.rise) / upW);
+  const downW = Math.max(1, next.rise - p.set);
+  return -(downW / upW) * sunHeight((t - p.set) / downW);
 }
 
 /** Extra sample times so the polyline hits the axis at rise/set. */
@@ -109,7 +117,7 @@ export function sunKnots(tL: number, tR: number): number[] {
   const out: number[] = [];
   const d0 = startOfDay(tL - DAY);
   const d1 = startOfDay(tR) + DAY;
-  const dMax = d0 + 60 * DAY;
+  const dMax = d0 + 16 * DAY;
   for (let d = d0; d <= d1 && d <= dMax; d += DAY) {
     const { rise, set } = sunTimes(d);
     out.push(rise, (rise + set) / 2, set);
@@ -119,12 +127,12 @@ export function sunKnots(tL: number, tR: number): number[] {
 
 export function moonKnots(tL: number, tR: number): number[] {
   const out: number[] = [];
-  const k0 = moonK(tL) - 1;
-  const k1 = moonK(tR) + 1;
-  const kMax = k0 + 80;
-  for (let k = k0; k <= k1 && k <= kMax; k++) {
-    const p = moonPassage(NEW_MOON + k * LUNAR_DAY);
-    out.push(p.rise, p.transit, p.set);
+  const k0 = moonKFloor(tL) - 1;
+  const k1 = Math.min(moonKFloor(tR) + 1, k0 + 16);
+  for (let k = k0; k <= k1; k++) {
+    const p = passageK(k);
+    const next = passageK(k + 1);
+    out.push(p.rise, p.transit, p.set, (p.set + next.rise) / 2);
   }
   return out;
 }
