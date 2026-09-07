@@ -158,21 +158,15 @@ p.lane = parent.lane;
 return out;
 }
 hitTest(x: number, y: number): Hit {
-if (this.selectedId) {
-const sel = this.placed.find((p: PlacedChip) => p.event.id === this.selectedId && !p.clustered);
-if (sel && sel.x1 - sel.x0 > 28) {
-if (x >= sel.x0 - 3 && x <= sel.x0 + 9 && y >= sel.y - 4 && y <= sel.y + sel.h + 4) return {
-chip: sel,
-handle: "start",
-minimap: false
+const miss: Hit = { chip: null, handle: null, minimap: false };
+const handleHit = (p: PlacedChip): Hit | null => {
+if (p.clustered || p.event.point || p.event.locked) return null;
+if (p.x1 - p.x0 <= 28) return null;
+if (y < p.y - 4 || y > p.y + p.h + 4) return null;
+if (x >= p.x0 - 3 && x <= p.x0 + 9) return { chip: p, handle: "start", minimap: false };
+if (x >= p.x1 - 9 && x <= p.x1 + 3) return { chip: p, handle: "end", minimap: false };
+return null;
 };
-if (x >= sel.x1 - 9 && x <= sel.x1 + 3 && y >= sel.y - 4 && y <= sel.y + sel.h + 4) return {
-chip: sel,
-handle: "end",
-minimap: false
-};
-}
-}
 for (let i = this.placed.length - 1; i >= 0; i--) {
 const p = this.placed[i];
 if (p.clustered) continue;
@@ -185,17 +179,15 @@ minimap: false
 };
 continue;
 }
+const edge = handleHit(p);
+if (edge) return edge;
 if (x >= p.x0 - 1 && x <= p.x1 + 1 && y >= p.y - 2 && y <= p.y + p.h + 2) return {
 chip: p,
 handle: null,
 minimap: false
 };
 }
-return {
-chip: null,
-handle: null,
-minimap: false
-};
+return miss;
 }
 descendants(id: string): CalEvent[] {
 const out: CalEvent[] = [];
