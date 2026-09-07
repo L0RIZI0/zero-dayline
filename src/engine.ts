@@ -4,7 +4,7 @@ import type { CalEvent, PlacedChip } from "./types";
 import { C, colorOf, FONT_DISPLAY, FONT_MONO, FONT_UI, inkOn } from "./theme";
 import { clamp, formatHm, formatRange, lerp, smoothstep, DAY } from "./time";
 import { drawGlyph, type GlyphDrawFlags } from "./glyphDraw";
-import { drawHorizonSun, roundRect } from "./engine-util";
+import { drawHorizonSun, drawHorizonMoon, roundRect } from "./engine-util";
 
 export class DaylineEngine extends EngineDraw {
 constructor(canvas: HTMLCanvasElement, host: import("./engine-core").EngineHost, opts: import("./engine-core").EngineOptions = {}) {
@@ -333,8 +333,13 @@ ctx.restore();
 }
 drawHoverTip() {
 if (this.sunHoverA > .012 && this.hoverSun) this.drawSunCursor(this.hoverSun.px, this.hoverSun.py);
+if (this.moonHoverA > .012 && this.hoverMoon) this.drawMoonCursor(this.hoverMoon.px, this.hoverMoon.py);
 if (this.mode === "none" && this.sunHover && this.hoverSun && !this.hoverId) {
 this.drawSunTip();
+return;
+}
+if (this.mode === "none" && this.moonHover && this.hoverMoon && !this.hoverId) {
+this.drawMoonTip();
 return;
 }
 const editing = this.mode === "drag-event" || this.mode === "resize-start" || this.mode === "resize-end";
@@ -454,6 +459,58 @@ ctx.lineTo(c * r * 0.5 + p * r * 0.15, s * r * 0.5 + q * r * 0.15);
 ctx.lineTo(c * r * 0.5 - p * r * 0.15, s * r * 0.5 - q * r * 0.15);
 ctx.closePath();
 }
+ctx.fill();
+ctx.restore();
+}
+drawMoonTip() {
+const moon = this.hoverMoon;
+if (!moon) return;
+const { ctx } = this;
+const rise = formatHm(moon.rise);
+const set = formatHm(moon.set);
+ctx.font = `400 11px ${FONT_MONO}`;
+const tw = Math.max(ctx.measureText(rise).width, ctx.measureText(set).width);
+const icon = 12;
+const gap = 6;
+const row = 16;
+const w = icon + gap + tw + 20;
+const h = row * 2 + 12;
+let x = this.cursorX + 14;
+let y = this.cursorY + 16;
+if (x + w > this.width - 8) x = this.cursorX - w - 12;
+if (y + h > this.height - 8) y = this.cursorY - h - 14;
+x = clamp(x, 8, this.width - w - 8);
+y = clamp(y, 8, this.height - h - 8);
+ctx.save();
+ctx.fillStyle = C.bgElevated;
+roundRect(ctx, x, y, w, h, 6);
+ctx.fill();
+ctx.strokeStyle = C.line;
+ctx.stroke();
+ctx.fillStyle = C.muted;
+ctx.font = `400 11px ${FONT_MONO}`;
+ctx.textAlign = "left";
+ctx.textBaseline = "middle";
+const y1 = y + 6 + row / 2;
+const y2 = y + 6 + row + row / 2;
+drawHorizonMoon(ctx, x + 8, y1, icon, "rise", C.muted);
+ctx.fillText(rise, x + 8 + icon + gap, y1);
+drawHorizonMoon(ctx, x + 8, y2, icon, "set", C.muted);
+ctx.fillText(set, x + 8 + icon + gap, y2);
+ctx.restore();
+}
+drawMoonCursor(cx: number, cy: number) {
+const { ctx } = this;
+const a = smoothstep(this.moonHoverA);
+const r = lerp(10, 13, a);
+ctx.save();
+ctx.translate(cx, cy);
+ctx.globalAlpha = a;
+ctx.fillStyle = "rgb(140,175,230)";
+ctx.beginPath();
+ctx.arc(0, 0, r * 0.72, 0.7, Math.PI * 2 - 0.55);
+ctx.arc(r * 0.38, -r * 0.1, r * 0.62, Math.PI * 1.15, Math.PI * 0.85, true);
+ctx.closePath();
 ctx.fill();
 ctx.restore();
 }

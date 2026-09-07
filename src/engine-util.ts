@@ -51,6 +51,49 @@ export function drawHorizonSun(
 	}
 	ctx.restore();
 }
+export function drawHorizonMoon(
+	ctx: CanvasRenderingContext2D,
+	x: number,
+	cy: number,
+	s: number,
+	kind: "rise" | "set",
+	color: string,
+) {
+	const cx = x + s * 0.5;
+	const hz = cy + (kind === "rise" ? s * 0.12 : s * 0.08);
+	ctx.save();
+	ctx.strokeStyle = color;
+	ctx.fillStyle = color;
+	ctx.lineWidth = 1.15;
+	ctx.lineCap = "round";
+	ctx.lineJoin = "round";
+	ctx.beginPath();
+	ctx.moveTo(x + 0.5, hz);
+	ctx.lineTo(x + s - 0.5, hz);
+	ctx.stroke();
+	ctx.beginPath();
+	const r = s * 0.26;
+	const my = hz - (kind === "rise" ? r * 0.35 : r * 0.15);
+	ctx.arc(cx, my, r, 0.55, Math.PI * 2 - 0.55);
+	ctx.arc(cx + r * 0.42, my - r * 0.08, r * 0.78, Math.PI * 1.12, Math.PI * 0.88, true);
+	ctx.closePath();
+	ctx.stroke();
+	if (kind === "rise") {
+		for (const a of [-2.4, -Math.PI / 2, -0.7]) {
+			ctx.beginPath();
+			ctx.moveTo(cx + Math.cos(a) * s * 0.4, hz + Math.sin(a) * s * 0.22 - r);
+			ctx.lineTo(cx + Math.cos(a) * s * 0.54, hz + Math.sin(a) * s * 0.32 - r);
+			ctx.stroke();
+		}
+	} else {
+		ctx.beginPath();
+		ctx.moveTo(cx - 2.2, hz + s * 0.34);
+		ctx.lineTo(cx, hz + s * 0.5);
+		ctx.lineTo(cx + 2.2, hz + s * 0.34);
+		ctx.stroke();
+	}
+	ctx.restore();
+}
 export function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
 	const rr = Math.min(r, w / 2, h / 2);
 	ctx.beginPath();

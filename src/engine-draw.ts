@@ -1,10 +1,10 @@
 import { EngineInput } from "./engine-input";
 import type { CalEvent, PlacedChip } from "./types";
 import { C, colorOf, FONT_DISPLAY, FONT_MONO, FONT_UI } from "./theme";
-import { clamp, formatHm, formatRange, lerp, smoothstep, startOfDay, DAY } from "./time";
+import { clamp, formatHm, formatRange, lerp, smoothstep, DAY } from "./time";
 import { coilUnit } from "./ticks";
 import { unitApproxMs, floorTo, addUnit } from "./time";
-import { seasonSigned, sunTimes, sunUnit, moonUnit } from "./sun";
+import { seasonSigned, sunTimes, sunUnit, moonUnit, sunKnots, moonKnots, moonTimes } from "./sun";
 import { drawHorizonSun, roundRect } from "./engine-util";
 import { lensAmpForSpan } from "./warp";
 
@@ -23,10 +23,21 @@ this.ctx.fillRect(nowX - hw, 0, hw * 2, ly + 40);
 }
 hitSun(x: number, y: number): { rise: number; set: number; px: number; py: number } | null {
 if (!this.showSun) return null;
-const pts = this.sunPts;
+return this.hitSky(this.sunPts, x, y, (t) => sunTimes(t));
+}
+hitMoon(x: number, y: number): { rise: number; set: number; px: number; py: number } | null {
+if (!this.showMoon) return null;
+const hovered = this.moonHover || this.moonHoverA > .18;
+return this.hitSky(this.moonPts, x, y, (t) => moonTimes(t), hovered ? 7 : 4.2);
+}
+hitSky(
+pts: { x: number; y: number }[],
+x: number,
+y: number,
+timesAt: (t: number) => { rise: number; set: number },
+thresh = this.sunHover || this.sunHoverA > .18 ? 7 : 4.2,
+): { rise: number; set: number; px: number; py: number } | null {
 if (pts.length < 2) return null;
-const hovered = this.sunHover || this.sunHoverA > .18;
-const thresh = hovered ? 7 : 4.2;
 let best = thresh;
 let bx = x;
 let by = y;
@@ -49,10 +60,14 @@ by = py;
 }
 }
 if (best >= thresh) return null;
-const times = sunTimes(this.xToTime(bx));
+const times = timesAt(this.xToTime(bx));
 return { rise: times.rise, set: times.set, px: bx, py: by };
 }
-skyHeights(ly: number, heightAt: (t: number, kDaily: number) => number): { x: number; y: number }[] {
+skyHeights(
+ly: number,
+heightAt: (t: number, kDaily: number) => number,
+knots?: (tL: number, tR: number) => number[],
+): { x: number; y: number }[] {
 const { width, spanMs } = this;
 const ampDay = 78;
 const ampSeason = 40;
@@ -76,15 +91,8 @@ const t = tL + (tR - tL) * (i / n0);
 raw.push({ t, x: this.timeToX(t) });
 }
 if (kDaily > 0.2) {
-const d0 = startOfDay(tL - DAY);
-const d1 = startOfDay(tR) + DAY;
-const dMax = d0 + 60 * DAY;
-for (let d = d0; d <= d1 && d <= dMax; d += DAY) {
-const { rise, set } = sunTimes(d);
-raw.push({ t: rise, x: this.timeToX(rise) });
-raw.push({ t: (rise + set) / 2, x: this.timeToX((rise + set) / 2) });
-raw.push({ t: set, x: this.timeToX(set) });
-}
+const extraT = (knots ?? sunKnots)(tL, tR);
+for (const t of extraT) raw.push({ t, x: this.timeToX(t) });
 raw.sort((a, b) => a.t - b.t);
 }
 const MAX_DX = 3;
@@ -158,7 +166,7 @@ const u = smoothstep(this.sunHoverA);
 const strokeA = lerp(.38, 1, u);
 const dayFillA = lerp(.045, .11, u);
 const nightFillA = lerp(.03, .08, u);
-const ys = this.skyHeights(ly, (t, k) => k * sunUnit(t) + (1 - k) * seasonSigned(t));
+const ys = this.skyHeights(ly, (t, k) => k * sunUnit(t) + (1 - k) * seasonSigned(t), sunKnots);
 this.sunPts = ys;
 this.paintSkyCurve(
 ys,
@@ -170,14 +178,19 @@ strokeA,
 );
 }
 drawMoon(ly: number) {
-const ys = this.skyHeights(ly, (t, k) => k * moonUnit(t));
+const u = smoothstep(this.moonHoverA);
+const strokeA = lerp(.42, 1, u);
+const upFillA = lerp(.05, .12, u);
+const downFillA = lerp(.03, .07, u);
+const ys = this.skyHeights(ly, (t, k) => k * moonUnit(t), moonKnots);
+this.moonPts = ys;
 this.paintSkyCurve(
 ys,
 ly,
 "rgba(140,175,230,1)",
-"rgba(110,150,210,0.07)",
-"rgba(40,60,110,0.05)",
-0.55,
+`rgba(110,150,210,${upFillA})`,
+`rgba(40,60,110,${downFillA})`,
+strokeA,
 );
 }
 drawCoil(ly: number) {

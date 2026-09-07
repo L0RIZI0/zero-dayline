@@ -58,6 +58,12 @@ if (!this.sunHover && this.sunHoverA < .012) {
 this.sunHoverA = 0;
 this.hoverSun = null;
 }
+const moonTarget = this.moonHover ? 1 : 0;
+this.moonHoverA += (moonTarget - this.moonHoverA) * expDamp(kSun, dt);
+if (!this.moonHover && this.moonHoverA < .012) {
+this.moonHoverA = 0;
+this.hoverMoon = null;
+}
 if (this.springing) {
 const k = this.reducedMotion ? 240 : 78;
 const d = this.reducedMotion ? 32 : 15.5;
