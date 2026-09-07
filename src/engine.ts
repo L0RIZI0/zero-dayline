@@ -314,6 +314,7 @@ ctx.stroke();
 ctx.restore();
 }
 drawHoverTip() {
+this.ctx.letterSpacing = "0px";
 if (this.sunHoverA > .012 && this.hoverSun) this.drawSunCursor(this.hoverSun.px, this.hoverSun.py);
 if (this.moonHoverA > .012 && this.hoverMoon) this.drawMoonCursor(this.hoverMoon.px, this.hoverMoon.py);
 if (this.mode === "none" && this.sunHover && this.hoverSun && !this.hoverId) {
@@ -332,6 +333,7 @@ if (!ev) return;
 const clustered = !editing ? this.placed.find((c: PlacedChip) => c.event.id === id)?.clustered ?? false : false;
 const clusterCount = this.placed.find((c: PlacedChip) => c.event.id === id)?.clusterCount ?? 1;
 const { ctx } = this;
+ctx.letterSpacing = "0px";
 const title = clustered ? `${clusterCount} events` : ev.title;
 const sub = clustered ? "" : formatRange(ev.start, ev.end);
 const durMs = Math.max(0, ev.end - ev.start);
@@ -339,7 +341,7 @@ const mins = Math.round(durMs / 6e4);
 const dur = editing && !clustered ? mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)}h${mins % 60 ? ` ${mins % 60}m` : ""}` : "";
 ctx.font = `500 12px ${FONT_UI}`;
 const w1 = ctx.measureText(title).width;
-ctx.font = `400 11px ${FONT_MONO}`;
+ctx.font = `400 11px ${FONT_UI}`;
 const w2 = sub ? ctx.measureText(sub).width : 0;
 const w3 = dur ? ctx.measureText(dur).width : 0;
 const mark = clustered ? undefined : ev.mark;
@@ -369,12 +371,12 @@ ctx.textBaseline = "top";
 ctx.fillText(title, x + gPad, y + 6);
 if (sub) {
 ctx.fillStyle = C.muted;
-ctx.font = `400 11px ${FONT_MONO}`;
+ctx.font = `400 11px ${FONT_UI}`;
 ctx.fillText(sub, x + gPad, y + 22);
 }
 if (dur) {
 ctx.fillStyle = C.subtle;
-ctx.font = `400 11px ${FONT_MONO}`;
+ctx.font = `400 11px ${FONT_UI}`;
 ctx.fillText(dur, x + gPad, y + 36);
 }
 ctx.restore();

@@ -3,7 +3,7 @@ import {
   MAX_SPAN_MS,
   MIN_SPAN_MS,
 } from "./types";
-import { FONT_DISPLAY } from "./theme";
+import { FONT_DISPLAY, LABEL_TRACK } from "./theme";
 import {
   clamp,
   DAY,
@@ -152,7 +152,7 @@ this.ticks = [];
 return;
 }
 this.ctx.font = `500 11px ${FONT_DISPLAY}`;
-this.ctx.letterSpacing = "0.16em";
+this.ctx.letterSpacing = LABEL_TRACK;
 const measure = (s: string) => {
 let w = this.textW.get(s);
 if (w == null) {
@@ -162,6 +162,7 @@ this.textW.set(s, w);
 return w;
 };
 this.ticks = buildTicks(this.tLeft(), this.tRight(), this.spanMs, (t) => this.timeToX(t), this.width, measure);
+this.ctx.letterSpacing = "0px";
 }
 stepLabelLanes(dt: number) {
 let chipTop = this.lineY() - 34;

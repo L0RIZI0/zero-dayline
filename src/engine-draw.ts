@@ -1,6 +1,6 @@
 import { EngineInput } from "./engine-input";
 import type { CalEvent, PlacedChip } from "./types";
-import { C, colorOf, FONT_DISPLAY, FONT_MONO, FONT_UI } from "./theme";
+import { C, colorOf, FONT_DISPLAY, FONT_MONO, FONT_UI, LABEL_TRACK } from "./theme";
 import { clamp, formatHm, formatRange, lerp, smoothstep, DAY } from "./time";
 import { coilUnit } from "./ticks";
 import { unitApproxMs, floorTo, addUnit } from "./time";
@@ -319,7 +319,7 @@ drawTicks(ly: number) {
 const { ctx } = this;
 ctx.textAlign = "center";
 ctx.textBaseline = "alphabetic";
-ctx.letterSpacing = "0.16em";
+ctx.letterSpacing = LABEL_TRACK;
 for (const tk of this.ticks) {
 if (tk.drawTick === false) continue;
 const h = tk.boundary ? 16 : tk.major ? 11 : 6;

@@ -64,6 +64,8 @@ export const CATEGORY_COLOR: Record<string, string> = {
 export const FONT_UI = '"IBM Plex Sans", system-ui, sans-serif';
 export const FONT_DISPLAY = '"IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif';
 export const FONT_MONO = '"IBM Plex Mono", ui-monospace, monospace';
+/** Axis labels (already condensed). Keep tracking quiet. */
+export const LABEL_TRACK = "0.04em";
 
 function hashStr(s: string): number {
   let h = 2166136261;

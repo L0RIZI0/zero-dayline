@@ -151,9 +151,9 @@ export function formatRange(start: number, end: number): string {
   const a = zonedParts(start);
   const b = zonedParts(end);
   const sameDay = a.year === b.year && a.month === b.month && a.day === b.day;
-  const left = `${WD_SHORT[a.weekdayIndex]} ${pad(a.day)} ${MONTHS[a.month - 1]}  ${pad(a.hour)}:${pad(a.minute)}`;
-  if (sameDay) return `${left} – ${pad(b.hour)}:${pad(b.minute)}`;
-  return `${left} → ${WD_SHORT[b.weekdayIndex]} ${pad(b.day)} ${MONTHS[b.month - 1]}  ${pad(b.hour)}:${pad(b.minute)}`;
+  const left = `${WD_SHORT[a.weekdayIndex]} ${pad(a.day)} ${MONTHS[a.month - 1]} · ${pad(a.hour)}:${pad(a.minute)}`;
+  if (sameDay) return `${left}–${pad(b.hour)}:${pad(b.minute)}`;
+  return `${left} → ${WD_SHORT[b.weekdayIndex]} ${pad(b.day)} ${MONTHS[b.month - 1]} · ${pad(b.hour)}:${pad(b.minute)}`;
 }
 
 export function formatClock(ms: number): string {
