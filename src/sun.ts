@@ -3,12 +3,17 @@
 import { DAY, HOUR, startOfDay } from "./time";
 
 const LAT = (46.5198 * Math.PI) / 180;
+const NEW_MOON = Date.UTC(2000, 0, 6, 18, 14, 0);
+/** Mean time between lunar transits (~24h 50.5m). */
+const LUNAR_DAY = 24.841666 * HOUR;
+const TROPICAL_MONTH = 27.321661 * DAY;
 
 function clamp(n: number, a: number, b: number) {
   return Math.max(a, Math.min(b, n));
 }
 
 const _slot: { sod: number; v: { rise: number; set: number } }[] = [];
+const _moon: { k: number; v: { rise: number; set: number; transit: number } }[] = [];
 
 /** Day-length fraction 0–1. */
 export function dayLengthFrac(ms: number): number {
@@ -53,12 +58,73 @@ export function sunUnit(t: number): number {
   return -(nightW / dayW) * sunHeight((t - set) / nightW);
 }
 
-/** Complementary night-peaking sinusoid. ~50 min lag so it isn't a perfect anti-sun. */
-export function moonUnit(t: number): number {
-  return -sunUnit(t - 50 * 60 * 1000);
-}
-
 /** −1 winter solstice, +1 summer. */
 export function seasonSigned(ms: number): number {
   return clamp((dayLengthFrac(ms) - 0.5) / 0.18, -1, 1);
+}
+
+function moonK(t: number): number {
+  return Math.floor((t - NEW_MOON) / LUNAR_DAY + 0.5);
+}
+
+/** One lunar passage (nearest transit). Rise/set are the axis knots. */
+export function moonPassage(t: number): { rise: number; set: number; transit: number } {
+  const k = moonK(t);
+  for (let i = 0; i < _moon.length; i++) if (_moon[i].k === k) return _moon[i].v;
+  const transit = NEW_MOON + k * LUNAR_DAY;
+  const dec = Math.sin((2 * Math.PI * (transit - NEW_MOON)) / TROPICAL_MONTH);
+  const up = (12.15 + dec * 1.35) * HOUR;
+  const v = { transit, rise: transit - up / 2, set: transit + up / 2 };
+  if (_moon.length >= 8) _moon.shift();
+  _moon.push({ k, v });
+  return v;
+}
+
+export function moonTimes(ms: number): { rise: number; set: number } {
+  const p = moonPassage(ms);
+  return { rise: p.rise, set: p.set };
+}
+
+/**
+ * Same knot rule as the sun: 0 at moonrise / moonset, + when the moon is up,
+ * − when it's down. ~50 min later each day (mean lunar day).
+ */
+export function moonUnit(t: number): number {
+  const cur = moonPassage(t);
+  if (t < cur.rise) {
+    const prev = moonPassage(cur.transit - LUNAR_DAY / 2);
+    const upW = Math.max(1, prev.set - prev.rise);
+    const downW = Math.max(1, cur.rise - prev.set);
+    return -(downW / upW) * sunHeight((t - prev.set) / downW);
+  }
+  const upW = Math.max(1, cur.set - cur.rise);
+  if (t <= cur.set) return sunHeight((t - cur.rise) / upW);
+  const next = moonPassage(cur.transit + LUNAR_DAY / 2);
+  const downW = Math.max(1, next.rise - cur.set);
+  return -(downW / upW) * sunHeight((t - cur.set) / downW);
+}
+
+/** Extra sample times so the polyline hits the axis at rise/set. */
+export function sunKnots(tL: number, tR: number): number[] {
+  const out: number[] = [];
+  const d0 = startOfDay(tL - DAY);
+  const d1 = startOfDay(tR) + DAY;
+  const dMax = d0 + 60 * DAY;
+  for (let d = d0; d <= d1 && d <= dMax; d += DAY) {
+    const { rise, set } = sunTimes(d);
+    out.push(rise, (rise + set) / 2, set);
+  }
+  return out;
+}
+
+export function moonKnots(tL: number, tR: number): number[] {
+  const out: number[] = [];
+  const k0 = moonK(tL) - 1;
+  const k1 = moonK(tR) + 1;
+  const kMax = k0 + 80;
+  for (let k = k0; k <= k1 && k <= kMax; k++) {
+    const p = moonPassage(NEW_MOON + k * LUNAR_DAY);
+    out.push(p.rise, p.transit, p.set);
+  }
+  return out;
 }

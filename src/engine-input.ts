@@ -110,6 +110,7 @@ y
 });
 if (this.mode === "pinch" && this.ptrs.size >= 2) {
 this.sunHover = false;
+this.moonHover = false;
 const [a, b] = [...this.ptrs.values()];
 const dist = Math.hypot(a.x - b.x, a.y - b.y) || 1;
 const mid = (a.x + b.x) / 2;
@@ -125,6 +126,7 @@ return;
 if (this.mode === "pan") {
 if (e.buttons === 0) return;
 this.sunHover = false;
+this.moonHover = false;
 if (Math.abs(x - this.grabX) > 3) this.moved = true;
 this.setAnchor(this.grabT, x);
 this.noteGesture(x);
@@ -189,14 +191,29 @@ const hit = this.hitTest(x, y);
 this.hoverId = hit.chip?.event.id ?? null;
 this.hoverHandle = hit.handle;
 this.sunHover = false;
+this.moonHover = false;
 if (!hit.chip && !hit.minimap && !hit.handle) {
 const sun = this.hitSun(x, y);
-if (sun) {
+const moon = this.hitMoon(x, y);
+if (sun && moon) {
+const ds = Math.hypot(x - sun.px, y - sun.py);
+const dm = Math.hypot(x - moon.px, y - moon.py);
+if (ds <= dm) {
 this.sunHover = true;
 this.hoverSun = sun;
+} else {
+this.moonHover = true;
+this.hoverMoon = moon;
+}
+} else if (sun) {
+this.sunHover = true;
+this.hoverSun = sun;
+} else if (moon) {
+this.moonHover = true;
+this.hoverMoon = moon;
 }
 }
-this.canvas.style.cursor = hit.minimap ? "pointer" : hit.handle ? "ew-resize" : hit.chip ? "grab" : this.sunHover || this.sunHoverA > .2 ? "pointer" : "grab";
+this.canvas.style.cursor = hit.minimap ? "pointer" : hit.handle ? "ew-resize" : hit.chip ? "grab" : this.sunHover || this.moonHover || this.sunHoverA > .2 || this.moonHoverA > .2 ? "pointer" : "grab";
 };
 onUp = (e: PointerEvent) => {
 const { x, y } = this.localXY(e);
@@ -256,6 +273,7 @@ if (this.mode === "none") {
 this.hoverId = null;
 this.cursorT = null;
 this.sunHover = false;
+this.moonHover = false;
 this.canvas.style.cursor = "grab";
 }
 };
@@ -263,6 +281,7 @@ onWheel = (e: WheelEvent) => {
 e.preventDefault();
 this.springing = false;
 this.sunHover = false;
+this.moonHover = false;
 const { x, y } = this.localXY(e);
 this.cursorX = x;
 this.cursorY = y;

@@ -135,6 +135,7 @@ onWheel(e: WheelEvent): void;
 onMenu(e: MouseEvent): void;
 onKey(e: KeyboardEvent): void;
 hitSun(x: number, y: number): { rise: number; set: number; px: number; py: number } | null;
+hitMoon(x: number, y: number): { rise: number; set: number; px: number; py: number } | null;
 }
 
 export class EngineCore {
@@ -241,6 +242,10 @@ sunPts: { x: number; y: number }[] = [];
 sunHover = false;
 sunHoverA = 0;
 hoverSun: { rise: number; set: number; px: number; py: number } | null = null;
+moonPts: { x: number; y: number }[] = [];
+moonHover = false;
+moonHoverA = 0;
+hoverMoon: { rise: number; set: number; px: number; py: number } | null = null;
 showSun = true;
 showMoon = false;
 persistEvents = true;
