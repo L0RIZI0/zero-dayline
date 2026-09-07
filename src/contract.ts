@@ -90,6 +90,14 @@ export type DaylineMountOptions = {
   nowRestFraction?: number;
   dpr?: number;
   /**
+   * Extra canvas pixels below the band. Layout (axis, ticks, marks, now
+   * marker, hit-testing) uses `height - skyBleedPx`. Only sun/moon strokes
+   * draw into the bleed; that region stays transparent. Default 0.
+   * Mount-time only (needs an alpha canvas). Zero sizes the <canvas> to
+   * bandHeight + skyBleedPx and overlays the bleed with pointer-events-none.
+   */
+  skyBleedPx?: number;
+  /**
    * `"demo"` skips host data, loads `seedCalendar`, and persists to localStorage.
    * Zero must leave this unset (host data + persist off).
    */

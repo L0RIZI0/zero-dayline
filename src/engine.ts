@@ -44,14 +44,27 @@ landingAt: fx?.landingAt,
 };
 }
 draw() {
-const { ctx, width, height } = this;
+const { ctx, width } = this;
+const band = this.bandHeight();
+if (this.skyBleedPx > 0) {
+ctx.clearRect(0, 0, width, this.height);
 ctx.fillStyle = C.bg;
-ctx.fillRect(0, 0, width, height);
+ctx.fillRect(0, 0, width, band);
+} else {
+ctx.fillStyle = C.bg;
+ctx.fillRect(0, 0, width, this.height);
+}
 const ly = this.lineY();
 const nowX = this.timeToX(this.now);
 this.drawNowWash(nowX, ly);
 if (this.showSun) this.drawSun(ly);
 if (this.showMoon) this.drawMoon(ly);
+ctx.save();
+if (this.skyBleedPx > 0) {
+ctx.beginPath();
+ctx.rect(0, 0, width, band);
+ctx.clip();
+}
 this.drawMidnights();
 this.drawCoil(ly);
 this.drawLine(ly);
@@ -61,6 +74,7 @@ this.drawChips();
 this.drawMilestones(ly);
 this.drawNowHead(nowX, ly);
 if (this.snapGuide != null) this.drawSnap(this.snapGuide, ly);
+ctx.restore();
 this.drawHoverTip();
 }
 drawMarkChip(p: PlacedChip) {
@@ -336,9 +350,9 @@ const h = dur ? 54 : sub ? 40 : 28;
 let x = this.cursorX + 14;
 let y = this.cursorY + 16;
 if (x + w > this.width - 8) x = this.cursorX - w - 12;
-if (y + h > this.height - 8) y = this.cursorY - h - 14;
+if (y + h > this.bandHeight() - 8) y = this.cursorY - h - 14;
 x = clamp(x, 8, this.width - w - 8);
-y = clamp(y, 8, this.height - h - 8);
+y = clamp(y, 8, this.bandHeight() - h - 8);
 ctx.save();
 ctx.fillStyle = C.bgElevated;
 roundRect(ctx, x, y, w, h, 6);
@@ -381,9 +395,9 @@ const h = row * 2 + 12;
 let x = this.cursorX + 14;
 let y = this.cursorY + 16;
 if (x + w > this.width - 8) x = this.cursorX - w - 12;
-if (y + h > this.height - 8) y = this.cursorY - h - 14;
+if (y + h > this.bandHeight() - 8) y = this.cursorY - h - 14;
 x = clamp(x, 8, this.width - w - 8);
-y = clamp(y, 8, this.height - h - 8);
+y = clamp(y, 8, this.bandHeight() - h - 8);
 ctx.save();
 ctx.fillStyle = C.bgElevated;
 roundRect(ctx, x, y, w, h, 6);
@@ -446,9 +460,9 @@ const h = row * 2 + 12;
 let x = this.cursorX + 14;
 let y = this.cursorY + 16;
 if (x + w > this.width - 8) x = this.cursorX - w - 12;
-if (y + h > this.height - 8) y = this.cursorY - h - 14;
+if (y + h > this.bandHeight() - 8) y = this.cursorY - h - 14;
 x = clamp(x, 8, this.width - w - 8);
-y = clamp(y, 8, this.height - h - 8);
+y = clamp(y, 8, this.bandHeight() - h - 8);
 ctx.save();
 ctx.fillStyle = C.bgElevated;
 roundRect(ctx, x, y, w, h, 6);
