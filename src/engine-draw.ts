@@ -4,9 +4,12 @@ import { C, colorOf, FONT_DISPLAY, FONT_MONO, FONT_UI } from "./theme";
 import { clamp, formatHm, formatRange, lerp, smoothstep, DAY } from "./time";
 import { coilUnit } from "./ticks";
 import { unitApproxMs, floorTo, addUnit } from "./time";
-import { seasonSigned, sunTimes, sunUnit, moonUnit, sunKnots, moonKnots, moonTimes } from "./sun";
+import { seasonSigned, sunTimes, sunEval, moonEval, sunKnots, moonKnots, moonTimes } from "./sun";
 import { drawHorizonSun, roundRect } from "./engine-util";
 import { lensAmpForSpan } from "./warp";
+
+type SkyKnot = { t: number; x: number; y: number; dx: number; dy: number };
+type SkyCubic = { x0: number; y0: number; x1: number; y1: number; x2: number; y2: number; x3: number; y3: number };
 
 export class EngineDraw extends EngineInput {
 drawNowWash(nowX: number, ly: number) {
@@ -23,45 +26,44 @@ this.ctx.fillRect(nowX - hw, 0, hw * 2, ly + 40);
 }
 hitSun(x: number, y: number): { rise: number; set: number; px: number; py: number } | null {
 if (!this.showSun) return null;
-return this.hitSky(this.sunPts, x, y, (t) => sunTimes(t));
+const hovered = this.sunHover || this.sunHoverA > .18;
+const k = this.skyK();
+return this.hitSky(x, y, (t) => sunEval(t).h * k + (1 - k) * seasonSigned(t), (t) => sunTimes(t), hovered ? 8 : 5);
 }
 hitMoon(x: number, y: number): { rise: number; set: number; px: number; py: number } | null {
 if (!this.showMoon) return null;
 const hovered = this.moonHover || this.moonHoverA > .18;
-return this.hitSky(this.moonPts, x, y, (t) => moonTimes(t), hovered ? 7 : 4.2);
+const k = this.skyK();
+return this.hitSky(x, y, (t) => moonEval(t).h * k, (t) => moonTimes(t), hovered ? 8 : 5);
+}
+skyK() {
+const pxPerDay = this.width / (this.spanMs / DAY);
+return clamp((pxPerDay - 4) / 12, 0, 1);
+}
+skyAmp(kDaily: number) {
+return kDaily * 78 + (1 - kDaily) * 40;
+}
+skyEnv(x: number) {
+const cx = this.width * 0.5;
+const sigma = Math.max(90, this.width * 0.32);
+const u = (x - cx) / sigma;
+return 0.62 + 0.38 * Math.exp(-0.5 * u * u);
+}
+skyY(ly: number, t: number, x: number, h: number) {
+return ly - this.skyAmp(this.skyK()) * this.skyEnv(x) * h;
 }
 hitSky(
-pts: { x: number; y: number }[],
 x: number,
 y: number,
+heightAt: (t: number) => number,
 timesAt: (t: number) => { rise: number; set: number },
-thresh = this.sunHover || this.sunHoverA > .18 ? 7 : 4.2,
+thresh: number,
 ): { rise: number; set: number; px: number; py: number } | null {
-if (pts.length < 2) return null;
-let best = thresh;
-let bx = x;
-let by = y;
-for (let i = 1; i < pts.length; i++) {
-const ax = pts[i - 1].x;
-const ay = pts[i - 1].y;
-const cx = pts[i].x;
-const cy = pts[i].y;
-const dx = cx - ax;
-const dy = cy - ay;
-const l2 = dx * dx + dy * dy || 1;
-const t = clamp(((x - ax) * dx + (y - ay) * dy) / l2, 0, 1);
-const px = ax + t * dx;
-const py = ay + t * dy;
-const d = Math.hypot(x - px, y - py);
-if (d < best) {
-best = d;
-bx = px;
-by = py;
-}
-}
-if (best >= thresh) return null;
-const times = timesAt(this.xToTime(bx));
-return { rise: times.rise, set: times.set, px: bx, py: by };
+const t = this.xToTime(x);
+const py = this.skyY(this.lineY(), t, x, heightAt(t));
+if (Math.abs(y - py) >= thresh) return null;
+const times = timesAt(t);
+return { rise: times.rise, set: times.set, px: x, py };
 }
 skyBusy() {
 return (
@@ -72,108 +74,96 @@ Math.abs(this.coastPx) > 12 ||
 this.springing
 );
 }
-skyHeights(
+skyCubics(
 ly: number,
-heightAt: (t: number, kDaily: number) => number,
-knots?: (tL: number, tR: number) => number[],
-): { x: number; y: number }[] {
+evalAt: (t: number) => { h: number; dh: number },
+knots: (tL: number, tR: number) => number[],
+): SkyCubic[] {
 const { width, spanMs } = this;
-const ampDay = 78;
-const ampSeason = 40;
-const pxPerDay = width / (spanMs / DAY);
-const kDaily = clamp((pxPerDay - 4) / 12, 0, 1);
-const cx = width * 0.5;
-const sigma = Math.max(90, width * 0.32);
-const envAt = (x: number) => 0.62 + 0.38 * Math.exp(-0.5 * ((x - cx) / sigma) * ((x - cx) / sigma));
-const busy = this.skyBusy();
-const pad = spanMs * 0.1;
+const kDaily = this.skyK();
+const amp = this.skyAmp(kDaily);
+const pad = spanMs * 0.12;
 const tL = this.centerT - spanMs * 0.5 - pad;
 const tR = this.centerT + spanMs * 0.5 + pad;
-type P = { t: number; x: number };
-let raw: P[] = [];
-const n0 = busy
-? Math.min(72, Math.max(28, Math.floor(width / 16)))
-: Math.min(140, Math.max(40, Math.floor(width / 9)));
-for (let i = 0; i <= n0; i++) {
-const t = tL + (tR - tL) * (i / n0);
-raw.push({ t, x: this.timeToX(t) });
+let times: number[];
+if (kDaily > 0.2) {
+times = knots(tL, tR).filter((t) => t >= tL && t <= tR);
+} else {
+const n = 8;
+times = [];
+for (let i = 0; i <= n; i++) times.push(tL + (tR - tL) * (i / n));
 }
-if (kDaily > 0.2 && !busy) {
-const extraT = (knots ?? sunKnots)(tL, tR);
-for (const t of extraT) raw.push({ t, x: this.timeToX(t) });
-raw.sort((a, b) => a.t - b.t);
+times.sort((a, b) => a - b);
+const uniq: number[] = [];
+for (const t of times) {
+if (!uniq.length || t - uniq[uniq.length - 1] > 60_000) uniq.push(t);
 }
-if (!busy) {
-const MAX_DX = 3.2;
-const MAX_N = 280;
-for (let pass = 0; pass < 5; pass++) {
-if (raw.length >= MAX_N) break;
-let grew = false;
-const next: P[] = [raw[0]];
-for (let i = 0; i < raw.length - 1; i++) {
-const a = raw[i];
-const b = raw[i + 1];
-if (
-next.length < MAX_N &&
-Math.abs(b.x - a.x) > MAX_DX &&
-Math.abs(b.t - a.t) > 45_000
-) {
-const t = (a.t + b.t) * 0.5;
-next.push({ t, x: this.timeToX(t) });
-grew = true;
+if (this.mapDirty) this.prepareMap();
+const den = this.liveDen || 1;
+const cx = width * 0.5;
+const sigma = Math.max(90, width * 0.32);
+const sigma2 = sigma * sigma;
+const knotsOut: SkyKnot[] = [];
+for (const t of uniq) {
+const x = this.timeToX(t);
+if (x < -80 || x > width + 80) continue;
+const { h, dh } = evalAt(t);
+const u = x - cx;
+const env = 0.62 + 0.38 * Math.exp(-0.5 * (u * u) / sigma2);
+const denv = 0.38 * Math.exp(-0.5 * (u * u) / sigma2) * (-u / sigma2);
+const dx = (this.dens(t) / den) * width;
+const dy = -amp * (denv * dx * h + env * dh);
+knotsOut.push({ t, x, y: ly - amp * env * h, dx, dy });
 }
-next.push(b);
+const segs: SkyCubic[] = [];
+for (let i = 0; i < knotsOut.length - 1; i++) {
+const a = knotsOut[i];
+const b = knotsOut[i + 1];
+if ((a.x < -40 && b.x < -40) || (a.x > width + 40 && b.x > width + 40)) continue;
+const dt = b.t - a.t;
+if (dt < 1) continue;
+segs.push({
+x0: a.x,
+y0: a.y,
+x1: a.x + (a.dx * dt) / 3,
+y1: a.y + (a.dy * dt) / 3,
+x2: b.x - (b.dx * dt) / 3,
+y2: b.y - (b.dy * dt) / 3,
+x3: b.x,
+y3: b.y,
+});
 }
-raw = next;
-if (!grew) break;
+return segs;
 }
-}
-const ys: { x: number; y: number }[] = [];
-const amp = kDaily * ampDay + (1 - kDaily) * ampSeason;
-for (const p of raw) {
-const h = heightAt(p.t, kDaily);
-const y = ly - amp * envAt(p.x) * h;
-if (ys.length) {
-const prev = ys[ys.length - 1];
-if (Math.abs(p.x - prev.x) < 0.45) {
-if (Math.abs(y - ly) > Math.abs(prev.y - ly)) ys[ys.length - 1] = { x: p.x, y };
-continue;
-}
-}
-ys.push({ x: p.x, y });
-}
-return ys;
-}
-paintSkyCurve(ys: { x: number; y: number }[], ly: number, stroke: string, upFill: string, downFill: string, strokeA: number, fill = true) {
+paintSkyCubics(segs: SkyCubic[], ly: number, stroke: string, upFill: string, downFill: string, strokeA: number, fill: boolean) {
 const { ctx } = this;
-if (!ys.length) return;
+if (!segs.length) return;
 ctx.save();
+if (fill) {
+for (const s of segs) {
+const above = (s.y0 + s.y3) * 0.5 < ly;
+ctx.beginPath();
+ctx.moveTo(s.x0, ly);
+ctx.lineTo(s.x0, s.y0);
+ctx.bezierCurveTo(s.x1, s.y1, s.x2, s.y2, s.x3, s.y3);
+ctx.lineTo(s.x3, ly);
+ctx.closePath();
+ctx.fillStyle = above ? upFill : downFill;
+ctx.globalAlpha = 1;
+ctx.fill();
+}
+}
 ctx.lineWidth = 1.3;
 ctx.strokeStyle = stroke;
 ctx.globalAlpha = strokeA;
 ctx.lineJoin = "round";
 ctx.lineCap = "round";
 ctx.beginPath();
-ctx.moveTo(ys[0].x, ys[0].y);
-for (let i = 1; i < ys.length; i++) ctx.lineTo(ys[i].x, ys[i].y);
-ctx.stroke();
-if (fill && ys.length > 1) {
-ctx.beginPath();
-ctx.moveTo(ys[0].x, ly);
-for (const p of ys) ctx.lineTo(p.x, Math.min(p.y, ly));
-ctx.lineTo(ys[ys.length - 1].x, ly);
-ctx.closePath();
-ctx.fillStyle = upFill;
-ctx.globalAlpha = 1;
-ctx.fill();
-ctx.beginPath();
-ctx.moveTo(ys[0].x, ly);
-for (const p of ys) ctx.lineTo(p.x, Math.max(p.y, ly));
-ctx.lineTo(ys[ys.length - 1].x, ly);
-ctx.closePath();
-ctx.fillStyle = downFill;
-ctx.fill();
+ctx.moveTo(segs[0].x0, segs[0].y0);
+for (const s of segs) {
+ctx.bezierCurveTo(s.x1, s.y1, s.x2, s.y2, s.x3, s.y3);
 }
+ctx.stroke();
 ctx.restore();
 }
 drawSun(ly: number) {
@@ -181,10 +171,13 @@ const u = smoothstep(this.sunHoverA);
 const strokeA = lerp(.38, 1, u);
 const dayFillA = lerp(.045, .11, u);
 const nightFillA = lerp(.03, .08, u);
-const ys = this.skyHeights(ly, (t, k) => k * sunUnit(t) + (1 - k) * seasonSigned(t), sunKnots);
-this.sunPts = ys;
-this.paintSkyCurve(
-ys,
+const k = this.skyK();
+const segs = this.skyCubics(ly, (t) => {
+const s = sunEval(t);
+return { h: k * s.h + (1 - k) * seasonSigned(t), dh: k * s.dh };
+}, sunKnots);
+this.paintSkyCubics(
+segs,
 ly,
 C.travel,
 `rgba(154,139,124,${dayFillA})`,
@@ -198,10 +191,13 @@ const u = smoothstep(this.moonHoverA);
 const strokeA = lerp(.42, 1, u);
 const upFillA = lerp(.05, .12, u);
 const downFillA = lerp(.03, .07, u);
-const ys = this.skyHeights(ly, (t, k) => k * moonUnit(t), moonKnots);
-this.moonPts = ys;
-this.paintSkyCurve(
-ys,
+const k = this.skyK();
+const segs = this.skyCubics(ly, (t) => {
+const m = moonEval(t);
+return { h: k * m.h, dh: k * m.dh };
+}, moonKnots);
+this.paintSkyCubics(
+segs,
 ly,
 "rgba(140,175,230,1)",
 `rgba(110,150,210,${upFillA})`,
