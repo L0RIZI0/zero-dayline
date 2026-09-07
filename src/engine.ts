@@ -52,6 +52,7 @@ this.drawNowWash(nowX, ly);
 this.drawMinimap();
 if (this.showSun) this.drawSun(ly);
 if (this.showMoon) this.drawMoon(ly);
+this.drawMidnights();
 this.drawCoil(ly);
 this.drawLine(ly);
 this.drawTicks(ly);

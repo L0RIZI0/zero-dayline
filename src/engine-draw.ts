@@ -258,6 +258,25 @@ ctx.moveTo(0, ly + .5);
 ctx.lineTo(width, ly + .5);
 ctx.stroke();
 }
+drawMidnights() {
+const { ctx, width, height } = this;
+const mids = this.ticks.filter((tk) => tk.boundary && tk.unit === "day");
+if (!mids.length) return;
+const gap = mids.length > 1 ? Math.abs(mids[1].x - mids[0].x) : width;
+const a = clamp(0.11 * (56 / Math.max(28, gap)), 0.045, 0.14);
+ctx.save();
+ctx.strokeStyle = C.tickMajor;
+ctx.lineWidth = 1;
+ctx.globalAlpha = a;
+for (const tk of mids) {
+if (tk.x < -1 || tk.x > width + 1) continue;
+ctx.beginPath();
+ctx.moveTo(tk.x + .5, 0);
+ctx.lineTo(tk.x + .5, height);
+ctx.stroke();
+}
+ctx.restore();
+}
 drawTicks(ly: number) {
 const { ctx } = this;
 ctx.textAlign = "center";
