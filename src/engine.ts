@@ -131,8 +131,8 @@ ctx.clip();
 ctx.fillText(e.title, x + gSize + 10, p.y + p.h / 2 + 0.5);
 ctx.restore();
 }
-if (sel && w > 28 && !e.point) {
-ctx.globalAlpha = ghost;
+if ((sel || hov) && w > 28 && !e.point) {
+ctx.globalAlpha = ghost * (sel ? 1 : 0.55);
 ctx.fillStyle = C.handle;
 roundRect(ctx, x + 1, p.y + 5, 4, p.h - 10, 1);
 ctx.fill();
@@ -189,8 +189,8 @@ ctx.clip();
 ctx.fillText(p.event.title, x + 9, p.y + p.h / 2 + .5);
 ctx.restore();
 }
-if (sel && w > 28) {
-ctx.globalAlpha = 1;
+if ((sel || hov) && w > 28) {
+ctx.globalAlpha = fade * (sel ? 1 : 0.55);
 ctx.fillStyle = inkOn(col);
 roundRect(ctx, x + 1, p.y + 5, 4, p.h - 10, 1);
 ctx.fill();
