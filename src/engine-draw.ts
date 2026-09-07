@@ -4,7 +4,7 @@ import { C, colorOf, FONT_DISPLAY, FONT_MONO, FONT_UI } from "./theme";
 import { clamp, formatHm, formatRange, lerp, smoothstep, startOfDay, DAY } from "./time";
 import { coilUnit } from "./ticks";
 import { unitApproxMs, floorTo, addUnit } from "./time";
-import { seasonSigned, sunTimes, sunUnit } from "./sun";
+import { seasonSigned, sunTimes, sunUnit, moonUnit } from "./sun";
 import { drawHorizonSun, roundRect } from "./engine-util";
 import { lensAmpForSpan } from "./warp";
 
@@ -22,6 +22,7 @@ this.ctx.fillStyle = g;
 this.ctx.fillRect(nowX - hw, 0, hw * 2, ly + 40);
 }
 hitSun(x: number, y: number): { rise: number; set: number; px: number; py: number } | null {
+if (!this.showSun) return null;
 const pts = this.sunPts;
 if (pts.length < 2) return null;
 const hovered = this.sunHover || this.sunHoverA > .18;
@@ -51,25 +52,15 @@ if (best >= thresh) return null;
 const times = sunTimes(this.xToTime(bx));
 return { rise: times.rise, set: times.set, px: bx, py: by };
 }
-drawSun(ly: number) {
-const { ctx, width, spanMs } = this;
+skyHeights(ly: number, heightAt: (t: number, kDaily: number) => number): { x: number; y: number }[] {
+const { width, spanMs } = this;
 const ampDay = 78;
 const ampSeason = 40;
 const pxPerDay = width / (spanMs / DAY);
 const kDaily = clamp((pxPerDay - 4) / 12, 0, 1);
-const u = smoothstep(this.sunHoverA);
-const strokeA = lerp(.38, 1, u);
-const dayFillA = lerp(.045, .11, u);
-const nightFillA = lerp(.03, .08, u);
 const cx = width * 0.5;
 const sigma = Math.max(90, width * 0.32);
 const envAt = (x: number) => 0.62 + 0.38 * Math.exp(-0.5 * ((x - cx) / sigma) * ((x - cx) / sigma));
-ctx.save();
-ctx.lineWidth = lerp(1.3, 1.75, u);
-ctx.strokeStyle = C.travel;
-ctx.globalAlpha = strokeA;
-ctx.lineJoin = "round";
-ctx.lineCap = "round";
 const extra =
 Math.abs(this.centerT - this.lagCenter) +
 0.55 * Math.abs(this.spanMs - this.lagSpan) +
@@ -124,16 +115,24 @@ let lastX = -1e9;
 for (const p of raw) {
 if (Math.abs(p.x - lastX) < 0.35) continue;
 lastX = p.x;
-const h = kDaily * sunUnit(p.t) + (1 - kDaily) * seasonSigned(p.t);
+const h = heightAt(p.t, kDaily);
 const amp = kDaily * ampDay + (1 - kDaily) * ampSeason;
 ys.push({ x: p.x, y: ly - amp * envAt(p.x) * h });
 }
-this.sunPts = ys;
+return ys;
+}
+paintSkyCurve(ys: { x: number; y: number }[], ly: number, stroke: string, upFill: string, downFill: string, strokeA: number) {
+const { ctx } = this;
+if (!ys.length) return;
+ctx.save();
+ctx.lineWidth = 1.3;
+ctx.strokeStyle = stroke;
+ctx.globalAlpha = strokeA;
+ctx.lineJoin = "round";
+ctx.lineCap = "round";
 ctx.beginPath();
-if (ys.length) {
 ctx.moveTo(ys[0].x, ys[0].y);
 for (let i = 1; i < ys.length; i++) ctx.lineTo(ys[i].x, ys[i].y);
-}
 ctx.stroke();
 if (ys.length > 1) {
 ctx.beginPath();
@@ -141,7 +140,7 @@ ctx.moveTo(ys[0].x, ly);
 for (const p of ys) ctx.lineTo(p.x, Math.min(p.y, ly));
 ctx.lineTo(ys[ys.length - 1].x, ly);
 ctx.closePath();
-ctx.fillStyle = `rgba(154,139,124,${dayFillA})`;
+ctx.fillStyle = upFill;
 ctx.globalAlpha = 1;
 ctx.fill();
 ctx.beginPath();
@@ -149,10 +148,37 @@ ctx.moveTo(ys[0].x, ly);
 for (const p of ys) ctx.lineTo(p.x, Math.max(p.y, ly));
 ctx.lineTo(ys[ys.length - 1].x, ly);
 ctx.closePath();
-ctx.fillStyle = `rgba(90,96,110,${nightFillA})`;
+ctx.fillStyle = downFill;
 ctx.fill();
 }
 ctx.restore();
+}
+drawSun(ly: number) {
+const u = smoothstep(this.sunHoverA);
+const strokeA = lerp(.38, 1, u);
+const dayFillA = lerp(.045, .11, u);
+const nightFillA = lerp(.03, .08, u);
+const ys = this.skyHeights(ly, (t, k) => k * sunUnit(t) + (1 - k) * seasonSigned(t));
+this.sunPts = ys;
+this.paintSkyCurve(
+ys,
+ly,
+C.travel,
+`rgba(154,139,124,${dayFillA})`,
+`rgba(90,96,110,${nightFillA})`,
+strokeA,
+);
+}
+drawMoon(ly: number) {
+const ys = this.skyHeights(ly, (t, k) => k * moonUnit(t));
+this.paintSkyCurve(
+ys,
+ly,
+"rgba(140,175,230,1)",
+"rgba(110,150,210,0.07)",
+"rgba(40,60,110,0.05)",
+0.55,
+);
 }
 drawCoil(ly: number) {
 const { ctx, width, spanMs } = this;

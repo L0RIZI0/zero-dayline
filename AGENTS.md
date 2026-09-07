@@ -6,5 +6,6 @@
 - `loadData` queues a snapshot while a drag/resize is in progress; apply on pointer up.
 - `seed.ts` is demo-only. Zero mounts with host `data` and `persist: false`; `source: "demo"` is the playground switch.
 - Glyph silhouettes live in `src/glyphs.ts` (Zero spec). Do not eyeball replacements. Spin-once + flash-fill are driven from `noteGlyphFx` (new marks, counter bumps, ongoing→stopped).
+- Sky curves: `data.sky.{sun,moon}`. Sun default on, moon default off. Moon uses `moonUnit` (complementary sinusoid).
 - Never push to `main`. Branch + PR. Release only via `workflow_dispatch` on `.github/workflows/release.yml`.
 - Consume as raw TypeScript (`transpilePackages`). No emit, no dist.

@@ -62,6 +62,8 @@ export type DaylineData = {
   now: number;
   marks: DaylineMark[];
   rails?: { planned?: boolean; recorded?: boolean; access?: boolean };
+  /** Sky curves. Defaults: sun on, moon off. */
+  sky?: { sun?: boolean; moon?: boolean };
 };
 
 export type DaylineTheme = {
