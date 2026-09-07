@@ -22,7 +22,7 @@ g.addColorStop(0, "rgba(244,244,246,0)");
 g.addColorStop(.5, `rgba(244,244,246,${(.05 * a).toFixed(3)})`);
 g.addColorStop(1, "rgba(244,244,246,0)");
 this.ctx.fillStyle = g;
-this.ctx.fillRect(nowX - hw, 0, hw * 2, ly + 40);
+this.ctx.fillRect(nowX - hw, 0, hw * 2, this.height);
 }
 hitSun(x: number, y: number): { rise: number; set: number; px: number; py: number } | null {
 if (!this.showSun) return null;
