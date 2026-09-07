@@ -1,11 +1,16 @@
 export type DaylineKind =
   | "task"
   | "moment"
+  | "instant"
   | "space"
   | "community"
   | "resource"
   | "individual"
-  | "place";
+  | "place"
+  | "organism"
+  | "entity"
+  | "soul"
+  | "link";
 
 export type DaylineTrack = "planned" | "recorded" | "access";
 
@@ -19,6 +24,10 @@ export type DaylineGlyph = {
   scheduled?: boolean;
   requested?: boolean;
   flip180?: boolean;
+  /** Monotonic; engine plays spin-once when this increases. */
+  spinOnce?: number;
+  /** Monotonic; engine plays flash-fill when this increases. */
+  flashFill?: number;
 };
 
 export type DaylineOccRef = {
@@ -46,7 +55,7 @@ export type DaylineMark = {
   cancelled?: boolean;
   auto?: boolean;
   occRef?: DaylineOccRef;
-  sessionAnchorId?: string;
+  sessionAnchorId?: string | number;
 };
 
 export type DaylineData = {
@@ -68,10 +77,10 @@ export type DaylineCallbacks = {
   onEmptyClick?: (t: number) => void;
   onActivate?: (entityId: string, mark: DaylineMark) => void;
   onOccurrenceMenu?: (entityId: string, occRef: DaylineOccRef | undefined, x: number, y: number) => void;
-  onSessionMenu?: (entityId: string, sessionAnchorId: string | undefined, x: number, y: number) => void;
+  onSessionMenu?: (entityId: string, sessionAnchorId: string | number | undefined, x: number, y: number) => void;
   onBandMenu?: (x: number, y: number) => void;
   onOccurrenceRetime?: (entityId: string, occRef: DaylineOccRef | undefined, start: number, end: number) => void;
-  onSessionRetime?: (entityId: string, sessionAnchorId: string | undefined, start: number, end: number) => void;
+  onSessionRetime?: (entityId: string, sessionAnchorId: string | number | undefined, start: number, end: number) => void;
 };
 
 export type DaylineMountOptions = {

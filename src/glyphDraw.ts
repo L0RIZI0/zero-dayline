@@ -9,7 +9,7 @@ import {
   STROKE,
   TASK_REQUESTED,
   type GlyphPrimitive,
-} from "./contract";
+} from "./glyphs";
 
 export type GlyphDrawFlags = {
   kind: string;
@@ -27,6 +27,18 @@ export type GlyphDrawFlags = {
   requested?: boolean;
   timeMs?: number;
   reducedMotion?: boolean;
+  /** performance.now() when a spin-once started; ignored if ongoing. */
+  spinOnceAt?: number;
+  /** performance.now() when a flash-fill started. */
+  flashAt?: number;
+  /** flash duration; default SPIN.flashMs, SPIN.fullTurnMs when paired with spin-once. */
+  flashDur?: number;
+  /** performance.now() when ongoing became true. */
+  ongoingSince?: number;
+  /** angle (rad) at the moment ongoing went false. */
+  landingFrom?: number;
+  /** performance.now() when landing started. */
+  landingAt?: number;
 };
 
 function parsePoints(s: string): { x: number; y: number }[] {
@@ -103,6 +115,106 @@ function primitive(
   }
 }
 
+function paintPrims(
+  ctx: CanvasRenderingContext2D,
+  kind: string,
+  prims: GlyphPrimitive[],
+  accent: string,
+  strokeW: number,
+  fillable: boolean,
+  filled: boolean,
+) {
+  for (let i = 0; i < prims.length; i++) {
+    ctx.save();
+    if (kind === "space" && i === 1 && !filled) ctx.globalAlpha *= 0.5;
+    if (kind === "space" && i === 2 && !filled) ctx.globalAlpha *= 0.42;
+    if (kind === "space" && i > 0 && filled) {
+      ctx.restore();
+      continue;
+    }
+    primitive(ctx, prims[i], accent, strokeW, fillable, filled);
+    ctx.restore();
+  }
+}
+
+/** CSS cubic-bezier(x1,y1,x2,y2) evaluated at time x in [0,1]. */
+function cubicBezier(x1: number, y1: number, x2: number, y2: number, x: number): number {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  let t = x;
+  for (let i = 0; i < 8; i++) {
+    const u = 1 - t;
+    const xt = 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t;
+    const dxt = 3 * u * u * x1 + 6 * u * t * (x2 - x1) + 3 * t * t * (1 - x2);
+    if (Math.abs(dxt) < 1e-6) break;
+    t -= (xt - x) / dxt;
+    if (t < 0) t = 0;
+    else if (t > 1) t = 1;
+  }
+  const u = 1 - t;
+  return 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t;
+}
+
+const spinOnceEase = (p: number) => cubicBezier(0.22, 1, 0.36, 1, p);
+const easeOutCubic = (p: number) => 1 - (1 - p) ** 3;
+
+/** Ongoing spin angle (rad). Ease-in over SPIN.easeMs, linear after. */
+export function ongoingAngle(elapsedMs: number): number {
+  const omega = (Math.PI * 2) / SPIN.fullTurnMs;
+  const ease = SPIN.easeMs;
+  if (elapsedMs <= 0) return 0;
+  if (elapsedMs < ease) {
+    const u = elapsedMs / ease;
+    // ∫ easeOutCubic = ∫ (3u-3u²+u³) du → 1.5u² - u³ + 0.25u⁴, scaled by easeMs
+    return omega * ease * (1.5 * u * u - u ** 3 + 0.25 * u ** 4);
+  }
+  const atEase = omega * ease * 0.75;
+  return atEase + omega * (elapsedMs - ease);
+}
+
+export function glyphStillAnimating(g: GlyphDrawFlags, now: number): boolean {
+  if (g.reducedMotion) return false;
+  if (g.ongoing) return true;
+  if (g.spinOnceAt != null && now - g.spinOnceAt < SPIN.fullTurnMs) return true;
+  const flashDur = g.flashDur ?? SPIN.flashMs;
+  if (g.flashAt != null && now - g.flashAt < flashDur) return true;
+  if (g.landingAt != null && now - g.landingAt < SPIN.easeMs) return true;
+  return false;
+}
+
+function spinFor(g: GlyphDrawFlags, now: number): number {
+  if (g.reducedMotion) return 0;
+  if (g.ongoing && g.ongoingSince != null) return ongoingAngle(now - g.ongoingSince);
+  if (g.ongoing) {
+    const t = now % SPIN.fullTurnMs;
+    return (t / SPIN.fullTurnMs) * Math.PI * 2;
+  }
+  if (g.landingAt != null) {
+    const p = Math.min(1, Math.max(0, (now - g.landingAt) / SPIN.easeMs));
+    const from = g.landingFrom ?? 0;
+    const twoPi = Math.PI * 2;
+    const target = Math.ceil(from / twoPi - 1e-6) * twoPi;
+    const dest = target <= from + 1e-6 ? from + twoPi : target;
+    return from + (dest - from) * spinOnceEase(p);
+  }
+  if (g.spinOnceAt != null) {
+    const p = (now - g.spinOnceAt) / SPIN.fullTurnMs;
+    if (p <= 0) return 0;
+    if (p >= 1) return 0;
+    return spinOnceEase(p) * Math.PI * 2;
+  }
+  return 0;
+}
+
+function flashAlpha(g: GlyphDrawFlags, now: number): number {
+  if (g.reducedMotion || g.flashAt == null) return 0;
+  const dur = g.flashDur ?? SPIN.flashMs;
+  const p = (now - g.flashAt) / dur;
+  if (p <= 0 || p >= 1) return 0;
+  const u = p < 0.5 ? p * 2 : (1 - p) * 2;
+  return u * u * (3 - 2 * u);
+}
+
 export function drawGlyph(ctx: CanvasRenderingContext2D, g: GlyphDrawFlags) {
   const kind = g.kind in GLYPH_GEOMETRY ? g.kind : "task";
   const spec = GLYPH_GEOMETRY[kind];
@@ -112,12 +224,10 @@ export function drawGlyph(ctx: CanvasRenderingContext2D, g: GlyphDrawFlags) {
   if (filled) strokeW = STROKE.filled;
   else if (scheduled) strokeW = kind === "space" ? STROKE.scheduledSpace : STROKE.scheduled;
 
+  const now = g.timeMs ?? 0;
   const origin = SPIN_ORIGIN[kind] ?? [12, 12];
-  let spin = 0;
-  if (g.ongoing && !g.reducedMotion) {
-    const t = (g.timeMs ?? 0) % SPIN.fullTurnMs;
-    spin = (t / SPIN.fullTurnMs) * Math.PI * 2;
-  }
+  const spin = spinFor(g, now);
+  const flash = flashAlpha(g, now);
 
   ctx.save();
   ctx.translate(g.cx, g.cy);
@@ -142,21 +252,17 @@ export function drawGlyph(ctx: CanvasRenderingContext2D, g: GlyphDrawFlags) {
     ctx.translate(-12, -12);
   }
 
-  const prims =
+  const prims: GlyphPrimitive[] =
     kind === "task" && g.requested
-      ? ([{ op: "polygon", points: TASK_REQUESTED, closed: true }] as GlyphPrimitive[])
+      ? [{ op: "polygon", points: TASK_REQUESTED, closed: true }]
       : spec.primitives;
 
-  for (let i = 0; i < prims.length; i++) {
-    const p = prims[i];
+  paintPrims(ctx, kind, prims, g.accent, strokeW || STROKE.base, spec.fillable, filled);
+
+  if (flash > 0.01 && spec.fillable && !filled) {
     ctx.save();
-    if (kind === "space" && i === 1 && !filled) ctx.globalAlpha *= 0.5;
-    if (kind === "space" && i === 2 && !filled) ctx.globalAlpha *= 0.42;
-    if (kind === "space" && i > 0 && filled) {
-      ctx.restore();
-      continue;
-    }
-    primitive(ctx, p, g.accent, strokeW || STROKE.base, spec.fillable, filled);
+    ctx.globalAlpha *= flash;
+    paintPrims(ctx, kind, prims, g.accent, STROKE.filled, spec.fillable, true);
     ctx.restore();
   }
   ctx.restore();
