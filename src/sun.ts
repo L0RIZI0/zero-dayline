@@ -53,6 +53,11 @@ export function sunUnit(t: number): number {
   return -(nightW / dayW) * sunHeight((t - set) / nightW);
 }
 
+/** Complementary night-peaking sinusoid. ~50 min lag so it isn't a perfect anti-sun. */
+export function moonUnit(t: number): number {
+  return -sunUnit(t - 50 * 60 * 1000);
+}
+
 /** −1 winter solstice, +1 summer. */
 export function seasonSigned(ms: number): number {
   return clamp((dayLengthFrac(ms) - 0.5) / 0.18, -1, 1);

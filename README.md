@@ -3,7 +3,7 @@
 Canvas dayline engine. Zero installs a **pinned tag**:
 
 ```json
-"@zero/dayline": "github:L0RIZI0/zero-dayline#v0.3.0"
+"@zero/dayline": "github:L0RIZI0/zero-dayline#v0.4.0"
 ```
 
 Add `@zero/dayline` to Next.js `transpilePackages`. There is no build output; `main` / `module` / `types` / `exports` point at `src/index.ts`.
@@ -22,12 +22,14 @@ const handle = mountDayline({
 
 `clock: "wall"` (default) means the engine owns `now`. Do not push a new timestamp from the host every second.
 
+Sky: `data.sky = { sun?: boolean, moon?: boolean }` — sun defaults on, moon off. Moon is a bluish complementary sinusoid (night-peaking, ~50 min lag).
+
 Playground only: `options: { source: "demo" }` loads the built-in calendar (`seed.ts`) and persists to `localStorage`. Zero must not set this — host `data` stays the source of truth and persist stays off.
 
 Glyphs follow Zero's 24×24 spec (`src/glyphs.ts`). New marks flash-fill; instants also spin-once. Pass `glyph.spinOnce` / `glyph.flashFill` counters to retrigger on an existing mark. Map `glyph.filled` / `scheduled` / `requested` from the face model so complete / scheduled / request states match the SVG glyphs.
 
 ## Release
 
-Releases are **manual**. GitHub Actions → *release* → Run workflow → version `0.3.0` (no `v`). That type-checks and pushes tag `v0.3.0`.
+Releases are **manual**. GitHub Actions → *release* → Run workflow → version `0.4.0` (no `v`). That type-checks and pushes tag `v0.4.0`.
 
 Never push straight to `main`. Feature branch + PR.
