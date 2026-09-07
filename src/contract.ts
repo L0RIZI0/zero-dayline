@@ -78,6 +78,11 @@ export type DaylineMountOptions = {
   clock?: "wall" | "data";
   nowRestFraction?: number;
   dpr?: number;
+  /**
+   * `"demo"` skips host data, loads `seedCalendar`, and persists to localStorage.
+   * Zero must leave this unset (host data + persist off).
+   */
+  source?: "demo" | "sample";
 };
 
 export type MountDaylineArgs = {
