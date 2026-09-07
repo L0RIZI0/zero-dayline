@@ -1,6 +1,6 @@
 {
   "name": "@zero/dayline",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Canvas dayline engine for Zero. Raw TypeScript — consume via Next transpilePackages.",
   "license": "UNLICENSED",
   "private": false,
