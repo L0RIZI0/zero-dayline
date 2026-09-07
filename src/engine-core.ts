@@ -64,6 +64,7 @@ export type EngineOptions = {
   nowRestFraction?: number;
   dpr?: number;
   source?: "demo" | "sample";
+  skyBleedPx?: number;
 };
 
 type Settings = { warpStrength: number; nowLens: boolean };
@@ -222,6 +223,7 @@ dirtyWarp = true;
 ro: ResizeObserver | null = null;
 needsResize = true;
 hostBox: { w: number; h: number } | null = null;
+skyBleedPx = 0;
 lanesInited = false;
 chipsInited = false;
 labelAnchor = 80;
@@ -262,7 +264,8 @@ this.canvas = canvas;
 canvas.style.display = "block";
 canvas.style.width = "100%";
 canvas.style.height = "100%";
-const ctx = canvas.getContext("2d", { alpha: false });
+this.skyBleedPx = Math.max(0, opts.skyBleedPx ?? 0);
+const ctx = canvas.getContext("2d", { alpha: this.skyBleedPx > 0 });
 if (!ctx) throw new Error("Canvas 2D unavailable");
 this.ctx = ctx;
 this.host = host;
@@ -603,6 +606,9 @@ this.lastIntent = msg;
 this.emit();
 }
 protected afterResize() {}
+bandHeight() {
+return Math.max(1, this.height - this.skyBleedPx);
+}
 resize() {
 const parent = this.canvas.parentElement ?? this.canvas;
 const r = this.canvas.getBoundingClientRect();
@@ -635,8 +641,14 @@ this.canvas.height = bh;
 this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 this.needsResize = false;
 if (this.focusX === 0) this.focusX = w / 2;
+if (this.skyBleedPx > 0) {
+this.ctx.clearRect(0, 0, w, h);
+this.ctx.fillStyle = C.bg;
+this.ctx.fillRect(0, 0, w, this.bandHeight());
+} else {
 this.ctx.fillStyle = C.bg;
 this.ctx.fillRect(0, 0, w, h);
+}
 this.afterResize();
 }
 }

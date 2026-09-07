@@ -3,7 +3,7 @@
 Canvas dayline engine. Zero installs a **pinned tag**:
 
 ```json
-"@zero/dayline": "github:L0RIZI0/zero-dayline#v0.7.6"
+"@zero/dayline": "github:L0RIZI0/zero-dayline#v0.7.7"
 ```
 
 Add `@zero/dayline` to Next.js `transpilePackages`. There is no build output; `main` / `module` / `types` / `exports` point at `src/index.ts`.
@@ -22,6 +22,8 @@ const handle = mountDayline({
 
 `clock: "wall"` (default) means the engine owns `now`. Do not push a new timestamp from the host every second.
 
+`options.skyBleedPx` (default 0): extra transparent pixels below the band. Layout stays on `height - skyBleedPx`; only sun/moon strokes draw into the bleed. Size the `<canvas>` to `bandHeight + skyBleedPx` and overlay the bleed with `pointer-events: none`. Mount-time only.
+
 Sky: `data.sky = { sun?: boolean, moon?: boolean }` — sun defaults on, moon off. Drawn as Hermite cubics through rise/peak/set (no dense sampling). Hover is closed-form `y(t)`. Moon crosses the axis at moonrise/moonset.
 
 Playground only: `options: { source: "demo" }` loads the built-in calendar (`seed.ts`) and persists to `localStorage`. Zero must not set this — host `data` stays the source of truth and persist stays off.
@@ -30,6 +32,6 @@ Glyphs follow Zero's 24×24 spec (`src/glyphs.ts`). New marks flash-fill; instan
 
 ## Release
 
-Releases are **manual**. GitHub Actions → *release* → Run workflow → version `0.7.6` (no `v`). That type-checks and pushes tag `v0.7.6`.
+Releases are **manual**. GitHub Actions → *release* → Run workflow → version `0.7.7` (no `v`). That type-checks and pushes tag `v0.7.7`.
 
 Never push straight to `main`. Feature branch + PR.

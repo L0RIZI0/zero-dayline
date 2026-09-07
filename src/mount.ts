@@ -21,6 +21,7 @@ export const mountDayline: MountDayline = (args: MountDaylineArgs): DaylineHandl
       callbacks: args.callbacks,
       nowRestFraction: args.options?.nowRestFraction,
       dpr: args.options?.dpr,
+      skyBleedPx: args.options?.skyBleedPx,
     },
   );
   return {

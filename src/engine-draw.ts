@@ -22,7 +22,7 @@ g.addColorStop(0, "rgba(244,244,246,0)");
 g.addColorStop(.5, `rgba(244,244,246,${(.05 * a).toFixed(3)})`);
 g.addColorStop(1, "rgba(244,244,246,0)");
 this.ctx.fillStyle = g;
-this.ctx.fillRect(nowX - hw, 0, hw * 2, this.height);
+this.ctx.fillRect(nowX - hw, 0, hw * 2, this.bandHeight());
 }
 hitSun(x: number, y: number): { rise: number; set: number; px: number; py: number } | null {
 if (!this.showSun) return null;
@@ -158,6 +158,12 @@ const { ctx } = this;
 if (!segs.length) return;
 ctx.save();
 if (fill) {
+if (this.skyBleedPx > 0) {
+ctx.save();
+ctx.beginPath();
+ctx.rect(0, 0, this.width, this.bandHeight());
+ctx.clip();
+}
 for (const s of segs) {
 const above = (s.y0 + s.y3) * 0.5 < ly;
 ctx.beginPath();
@@ -176,6 +182,7 @@ ctx.fillStyle = above ? upFill : downFill;
 ctx.globalAlpha = 1;
 ctx.fill();
 }
+if (this.skyBleedPx > 0) ctx.restore();
 }
 ctx.lineWidth = 1.3;
 ctx.globalAlpha = strokeA;

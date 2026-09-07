@@ -442,6 +442,6 @@ else if (this.mode === "pinch") this.setAnchor(this.pinchT, this.pinchX);
 else if (this.flickT != null) this.setAnchor(this.flickT, this.flickX);
 }
 lineY() {
-return Math.round(this.height * .62);
+return Math.round(this.bandHeight() * .62);
 }
 }
