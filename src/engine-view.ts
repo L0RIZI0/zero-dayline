@@ -128,6 +128,7 @@ this.rebuildWarp();
 this.mapDirty = true;
 this.placed = this.layout();
 this.stepChipPose(dt);
+this.stepHandleA(dt);
 this.collectTicks();
 this.stepLabelLanes(dt);
 this.stepLabelFade(dt);
@@ -241,6 +242,26 @@ g.x1 = this.timeToX(g.event.end);
 this.chipPose.set(id, { ...pose, a, ghost: g });
 }
 this.chipsInited = true;
+}
+stepHandleA(dt: number) {
+const k = this.reducedMotion ? 40 : 13;
+const live = new Set<string>();
+for (const p of this.placed) {
+if (p.clustered || p.event.point || p.x1 - p.x0 <= 28) continue;
+const on = p.event.id === this.selectedId || p.event.id === this.hoverId;
+if (!on && !this.handleA.has(p.event.id)) continue;
+live.add(p.event.id);
+const cur = this.handleA.get(p.event.id) ?? 0;
+const next = cur + ((on ? 1 : 0) - cur) * expDamp(k, dt);
+if (next < 0.02 && !on) this.handleA.delete(p.event.id);
+else this.handleA.set(p.event.id, next);
+}
+for (const [id, cur] of [...this.handleA]) {
+if (live.has(id)) continue;
+const next = cur + (0 - cur) * expDamp(k, dt);
+if (next < 0.02) this.handleA.delete(id);
+else this.handleA.set(id, next);
+}
 }
 stepLabelFade(dt: number) {
 const k = this.reducedMotion ? 48 : 12;

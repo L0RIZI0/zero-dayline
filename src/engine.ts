@@ -131,18 +131,30 @@ ctx.clip();
 ctx.fillText(e.title, x + gSize + 10, p.y + p.h / 2 + 0.5);
 ctx.restore();
 }
-if ((sel || hov) && w > 28 && !e.point) {
-ctx.globalAlpha = ghost * (sel ? 1 : 0.55);
-ctx.fillStyle = C.handle;
-roundRect(ctx, x + 1, p.y + 5, 4, p.h - 10, 1);
-ctx.fill();
-roundRect(ctx, x + w - 5, p.y + 5, 4, p.h - 10, 1);
-ctx.fill();
-}
+if (w > 28 && !e.point) this.drawChipHandles(x, p.y, w, p.h, e.id, ghost, sel);
 ctx.restore();
 }
 chipAlpha(id: string): number {
 return this.chipPose.get(id)?.a ?? 1;
+}
+drawChipHandles(x: number, y: number, w: number, h: number, id: string, ghost: number, sel: boolean, color = C.handle) {
+const a = this.handleA.get(id) ?? 0;
+const u = smoothstep(a);
+if (u < 0.02) return;
+const { ctx } = this;
+const slide = (1 - u) * 6;
+const peak = sel ? 0.4 : 0.28;
+ctx.save();
+ctx.beginPath();
+ctx.rect(x, y, w, h);
+ctx.clip();
+ctx.globalAlpha = ghost * peak * u;
+ctx.fillStyle = color;
+roundRect(ctx, x + 1 - slide, y + 5, 4, h - 10, 1);
+ctx.fill();
+roundRect(ctx, x + w - 5 + slide, y + 5, 4, h - 10, 1);
+ctx.fill();
+ctx.restore();
 }
 drawChips() {
 const { ctx } = this;
@@ -189,14 +201,7 @@ ctx.clip();
 ctx.fillText(p.event.title, x + 9, p.y + p.h / 2 + .5);
 ctx.restore();
 }
-if ((sel || hov) && w > 28) {
-ctx.globalAlpha = fade * (sel ? 1 : 0.55);
-ctx.fillStyle = inkOn(col);
-roundRect(ctx, x + 1, p.y + 5, 4, p.h - 10, 1);
-ctx.fill();
-roundRect(ctx, x + w - 5, p.y + 5, 4, p.h - 10, 1);
-ctx.fill();
-}
+if (w > 28) this.drawChipHandles(x, p.y, w, p.h, p.event.id, fade, sel, inkOn(col));
 ctx.restore();
 }
 for (const [id, pose] of this.chipPose) {

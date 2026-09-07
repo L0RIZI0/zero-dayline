@@ -152,6 +152,7 @@ events: CalEvent[] = [];
 selectedId: string | null = null;
 hoverId: string | null = null;
 hoverHandle: "start" | "end" | null = null;
+handleA = new Map<string, number>();
 cursorT: number | null = null;
 warpStrength: number;
 nowLensOn: boolean;

@@ -301,7 +301,7 @@ const { ctx, width, height } = this;
 const mids = this.ticks.filter((tk) => tk.boundary && tk.unit === "day");
 if (!mids.length) return;
 const gap = mids.length > 1 ? Math.abs(mids[1].x - mids[0].x) : width;
-const a = clamp(0.11 * (56 / Math.max(28, gap)), 0.045, 0.14);
+const a = clamp(0.11 * (56 / Math.max(28, gap)), 0.045, 0.14) * 1.1;
 ctx.save();
 ctx.strokeStyle = C.tickMajor;
 ctx.lineWidth = 1;
