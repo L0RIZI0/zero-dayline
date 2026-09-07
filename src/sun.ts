@@ -43,19 +43,31 @@ export function sunHeight(u: number): number {
   return Math.sin(Math.PI * clamp(u, 0, 1));
 }
 
-export function sunUnit(t: number): number {
+function sineEval(u: number, amp: number, dur: number): { h: number; dh: number } {
+  const uu = clamp(u, 0, 1);
+  const s = Math.sin(Math.PI * uu);
+  const c = u <= 0 || u >= 1 ? (u <= 0 ? 1 : -1) : Math.cos(Math.PI * uu);
+  return { h: amp * s, dh: (amp * Math.PI * c) / Math.max(1, dur) };
+}
+
+/** Height and d/dt of the sun wave. 0 at rise/set. */
+export function sunEval(t: number): { h: number; dh: number } {
   const { rise, set } = sunTimes(t);
   if (t < rise) {
     const prev = sunTimes(t - DAY);
     const dayW = Math.max(1, prev.set - prev.rise);
     const nightW = Math.max(1, rise - prev.set);
-    return -(nightW / dayW) * sunHeight((t - prev.set) / nightW);
+    return sineEval((t - prev.set) / nightW, -(nightW / dayW), nightW);
   }
   const dayW = Math.max(1, set - rise);
-  if (t <= set) return sunHeight((t - rise) / dayW);
+  if (t <= set) return sineEval((t - rise) / dayW, 1, dayW);
   const next = sunTimes(t + DAY);
   const nightW = Math.max(1, next.rise - set);
-  return -(nightW / dayW) * sunHeight((t - set) / nightW);
+  return sineEval((t - set) / nightW, -(nightW / dayW), nightW);
+}
+
+export function sunUnit(t: number): number {
+  return sunEval(t).h;
 }
 
 /** −1 winter solstice, +1 summer. */
@@ -93,11 +105,7 @@ export function moonTimes(ms: number): { rise: number; set: number } {
   return { rise: p.rise, set: p.set };
 }
 
-/**
- * Same knot rule as the sun: 0 at moonrise / moonset, + when the moon is up,
- * − when it's down. C1 at the knots (matching sunUnit).
- */
-export function moonUnit(t: number): number {
+function moonPair(t: number) {
   let k = moonKFloor(t);
   let p = passageK(k);
   if (t < p.rise) p = passageK(k - 1);
@@ -106,10 +114,19 @@ export function moonUnit(t: number): number {
     p = next;
     next = passageK(p.k + 1);
   }
+  return { p, next };
+}
+
+export function moonEval(t: number): { h: number; dh: number } {
+  const { p, next } = moonPair(t);
   const upW = Math.max(1, p.set - p.rise);
-  if (t <= p.set) return sunHeight((t - p.rise) / upW);
+  if (t <= p.set) return sineEval((t - p.rise) / upW, 1, upW);
   const downW = Math.max(1, next.rise - p.set);
-  return -(downW / upW) * sunHeight((t - p.set) / downW);
+  return sineEval((t - p.set) / downW, -(downW / upW), downW);
+}
+
+export function moonUnit(t: number): number {
+  return moonEval(t).h;
 }
 
 /** Extra sample times so the polyline hits the axis at rise/set. */
@@ -120,7 +137,8 @@ export function sunKnots(tL: number, tR: number): number[] {
   const dMax = d0 + 16 * DAY;
   for (let d = d0; d <= d1 && d <= dMax; d += DAY) {
     const { rise, set } = sunTimes(d);
-    out.push(rise, (rise + set) / 2, set);
+    const next = sunTimes(d + DAY);
+    out.push(rise, (rise + set) / 2, set, (set + next.rise) / 2);
   }
   return out;
 }
