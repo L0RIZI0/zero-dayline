@@ -4,12 +4,12 @@ import { C, colorOf, FONT_DISPLAY, FONT_MONO, FONT_UI } from "./theme";
 import { clamp, formatHm, formatRange, lerp, smoothstep, DAY } from "./time";
 import { coilUnit } from "./ticks";
 import { unitApproxMs, floorTo, addUnit } from "./time";
-import { seasonSigned, sunTimes, sunEval, moonEval, sunKnots, moonKnots, moonTimes } from "./sun";
+import { seasonSigned, sunTimes, sunEval, moonEval, sunKnots, moonKnots, moonTimes, sunRgb, rgbCss, SUN_GOLD } from "./sun";
 import { drawHorizonSun, roundRect } from "./engine-util";
 import { lensAmpForSpan } from "./warp";
 
 type SkyKnot = { t: number; x: number; y: number; dx: number; dy: number };
-type SkyCubic = { x0: number; y0: number; x1: number; y1: number; x2: number; y2: number; x3: number; y3: number };
+type SkyCubic = { x0: number; y0: number; x1: number; y1: number; x2: number; y2: number; x3: number; y3: number; t0: number; t3: number };
 
 export class EngineDraw extends EngineInput {
 drawNowWash(nowX: number, ly: number) {
@@ -138,11 +138,22 @@ x2: b.x - (b.dx * dt) / 3,
 y2: b.y - (b.dy * dt) / 3,
 x3: b.x,
 y3: b.y,
+t0: a.t,
+t3: b.t,
 });
 }
 return segs;
 }
-paintSkyCubics(segs: SkyCubic[], ly: number, stroke: string, upFill: string, downFill: string, strokeA: number, fill: boolean) {
+paintSkyCubics(
+segs: SkyCubic[],
+ly: number,
+stroke: string,
+upFill: string,
+downFill: string,
+strokeA: number,
+fill: boolean,
+colorAt?: (t: number) => [number, number, number],
+) {
 const { ctx } = this;
 if (!segs.length) return;
 ctx.save();
@@ -155,22 +166,41 @@ ctx.lineTo(s.x0, s.y0);
 ctx.bezierCurveTo(s.x1, s.y1, s.x2, s.y2, s.x3, s.y3);
 ctx.lineTo(s.x3, ly);
 ctx.closePath();
+if (colorAt) {
+const mid = colorAt((s.t0 + s.t3) * 0.5);
+const a = above ? 0.07 : 0.04;
+ctx.fillStyle = rgbCss(mid, a);
+} else {
 ctx.fillStyle = above ? upFill : downFill;
+}
 ctx.globalAlpha = 1;
 ctx.fill();
 }
 }
 ctx.lineWidth = 1.3;
-ctx.strokeStyle = stroke;
 ctx.globalAlpha = strokeA;
 ctx.lineJoin = "round";
 ctx.lineCap = "round";
+if (colorAt) {
+for (const s of segs) {
+const g = ctx.createLinearGradient(s.x0, s.y0, s.x3, s.y3);
+g.addColorStop(0, rgbCss(colorAt(s.t0)));
+g.addColorStop(1, rgbCss(colorAt(s.t3)));
+ctx.strokeStyle = g;
+ctx.beginPath();
+ctx.moveTo(s.x0, s.y0);
+ctx.bezierCurveTo(s.x1, s.y1, s.x2, s.y2, s.x3, s.y3);
+ctx.stroke();
+}
+} else {
+ctx.strokeStyle = stroke;
 ctx.beginPath();
 ctx.moveTo(segs[0].x0, segs[0].y0);
 for (const s of segs) {
 ctx.bezierCurveTo(s.x1, s.y1, s.x2, s.y2, s.x3, s.y3);
 }
 ctx.stroke();
+}
 ctx.restore();
 }
 drawSun(ly: number) {
@@ -186,11 +216,12 @@ return { h: k * s.h + (1 - k) * seasonSigned(t), dh: k * s.dh };
 this.paintSkyCubics(
 segs,
 ly,
-C.travel,
-`rgba(154,139,124,${dayFillA})`,
-`rgba(90,96,110,${nightFillA})`,
+rgbCss(SUN_GOLD),
+`rgba(228,196,78,${dayFillA})`,
+`rgba(90,96,132,${nightFillA})`,
 strokeA,
 !this.skyBusy(),
+k > 0.2 ? sunRgb : undefined,
 );
 }
 drawMoon(ly: number) {
