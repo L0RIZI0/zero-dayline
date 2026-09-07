@@ -259,6 +259,9 @@ lastIntent: string | null = null;
 glyphFx = new Map<string, GlyphFx>();
 constructor(canvas: HTMLCanvasElement, host: EngineHost, opts: EngineOptions = {}) {
 this.canvas = canvas;
+canvas.style.display = "block";
+canvas.style.width = "100%";
+canvas.style.height = "100%";
 const ctx = canvas.getContext("2d", { alpha: false });
 if (!ctx) throw new Error("Canvas 2D unavailable");
 this.ctx = ctx;
@@ -443,9 +446,10 @@ el.addEventListener("contextmenu", this.onMenu);
 window.addEventListener("keydown", this.onKey);
 this.ro = new ResizeObserver(() => {
 this.needsResize = true;
+if (this.running) this.resize();
 });
-this.ro.observe(el);
 if (el.parentElement) this.ro.observe(el.parentElement);
+else this.ro.observe(el);
 window.addEventListener("resize", this.onWinResize);
 }
 unbind() {
@@ -574,7 +578,7 @@ applyTheme(theme: DaylineTheme) {
 applyChrome(theme);
 }
 resizeTo(width: number, height: number) {
-this.hostBox = { w: Math.max(1, width), h: Math.max(1, height) };
+this.hostBox = { w: Math.max(0, width), h: Math.max(0, height) };
 this.needsResize = true;
 this.resize();
 }
@@ -598,36 +602,41 @@ noteIntent(msg: string) {
 this.lastIntent = msg;
 this.emit();
 }
+protected afterResize() {}
 resize() {
 const parent = this.canvas.parentElement ?? this.canvas;
 const r = this.canvas.getBoundingClientRect();
 const pr = parent.getBoundingClientRect();
 let w: number;
 let h: number;
-if (this.hostBox && this.hostBox.w >= 8 && this.hostBox.h >= 8) {
+if (this.hostBox) {
 w = Math.floor(this.hostBox.w);
 h = Math.floor(this.hostBox.h);
 } else {
-w = Math.floor(Math.max(r.width, pr.width));
-h = Math.floor(Math.max(r.height, pr.height));
-if (w < 16 || h < 16) {
-w = Math.max(w, Math.floor(window.innerWidth) || 1024);
-h = Math.max(h, Math.max(240, Math.floor((window.innerHeight || 720) * .45)));
-this.needsResize = true;
+w = Math.floor(Math.max(r.width, pr.width, 0));
+h = Math.floor(Math.max(r.height, pr.height, 0));
 }
+if (w < 16 || h < 16) {
+this.needsResize = true;
+return;
 }
 const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-if (w === this.width && h === this.height && dpr === this.dpr && this.canvas.width === Math.floor(w * dpr)) {
-this.needsResize = w >= 16 && h >= 16 ? false : true;
+const bw = Math.floor(w * dpr);
+const bh = Math.floor(h * dpr);
+if (w === this.width && h === this.height && dpr === this.dpr && this.canvas.width === bw && this.canvas.height === bh) {
+this.needsResize = false;
 return;
 }
 this.dpr = dpr;
 this.width = w;
 this.height = h;
-this.canvas.width = Math.floor(w * dpr);
-this.canvas.height = Math.floor(h * dpr);
+this.canvas.width = bw;
+this.canvas.height = bh;
 this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-if (w >= 16 && h >= 16) this.needsResize = false;
+this.needsResize = false;
 if (this.focusX === 0) this.focusX = w / 2;
+this.ctx.fillStyle = C.bg;
+this.ctx.fillRect(0, 0, w, h);
+this.afterResize();
 }
 }

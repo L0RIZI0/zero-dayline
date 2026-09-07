@@ -132,6 +132,15 @@ this.collectTicks();
 this.stepLabelLanes(dt);
 this.stepLabelFade(dt);
 }
+afterResize() {
+if (!this.running || this.width < 16 || this.height < 16) return;
+this.dirtyWarp = true;
+this.rebuildWarp();
+this.mapDirty = true;
+this.placed = this.layout();
+this.collectTicks();
+this.draw();
+}
 panBy(dx: number) {
 if (this.width < 8) return;
 const mid = this.xToTime(this.width / 2);
