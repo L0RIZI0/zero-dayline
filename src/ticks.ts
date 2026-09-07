@@ -1,5 +1,5 @@
 import type { TickMark, TickUnit } from "./types";
-import { addUnit, floorTo, formatTickLabel, HOUR, unitApproxMs } from "./time";
+import { addUnit, clamp, floorTo, formatTickLabel, unitApproxMs } from "./time";
 
 type Level = { unit: TickUnit; step: number; major: boolean; label: boolean };
 export type LabelLane = "year" | "month" | "day" | "time";
@@ -59,7 +59,7 @@ export function buildTicks(
     const approx = unitApproxMs(level.unit, level.step);
     const avgPx = (approx / spanMs) * width;
     if (avgPx < 3 && level.unit !== "year") continue;
-    if (avgPx > width * 1.8) continue;
+    if (avgPx > width * 1.8 && !(level.unit === "day" && level.step === 1)) continue;
     if (level.unit === "week") {
       const dayPx = (unitApproxMs("day", 1) / spanMs) * width;
       if (dayPx >= labelMinPx("day", spanMs) * 0.6) continue;
@@ -70,24 +70,37 @@ export function buildTicks(
     while (t <= b && guard++ < 5000) {
       const isDay = level.unit === "day" && level.step === 1;
       const xTick = timeToX(t);
-      const labelT = isDay ? t + 12 * HOUR : t;
-      const x = isDay ? timeToX(labelT) : xTick;
-      if (xTick >= -80 && xTick <= width + 80) {
+      let x = xTick;
+      let vis0 = 0;
+      let vis1 = 0;
+      if (isDay) {
+        const xDay0 = xTick;
+        const xDay1 = timeToX(t + approx);
+        vis0 = Math.max(xDay0, 0);
+        vis1 = Math.min(xDay1, width);
+        x = vis1 > vis0 ? (vis0 + vis1) * 0.5 : xTick;
+      }
+      if (xTick >= -80 && xTick <= width + 80 || isDay && vis1 > vis0) {
         const localPx = Math.abs(timeToX(t + approx) - xTick);
         const room = level.major ? 7 : 3.5;
-        if (localPx >= room) {
+        if (localPx >= room || isDay && vis1 - vis0 >= 24) {
           const tooCloseMajor = !isDay && usedMajorX.some((mx) => Math.abs(mx - xTick) < 6);
           if (!tooCloseMajor) {
             let label: string | undefined;
             let labelWidth = 0;
             const minPx = labelMinPx(level.unit, spanMs);
-            const labelOk = level.label && localPx >= minPx && x > 8 && x < width - 8;
+            const onCanvas = x > 0 && x < width;
+            const labelOk = isDay
+              ? vis1 - vis0 >= 28 && onCanvas
+              : level.label && localPx >= minPx && x > 8 && x < width - 8;
             if (labelOk) {
-              const text = formatTickLabel(isDay ? t : labelT, level.unit, spanMs);
+              const text = formatTickLabel(t, level.unit, spanMs);
               const w = measure(text);
               const pad = lane === "time" ? 5 : 7;
-              const x0 = x - w * 0.5 - pad;
-              const x1 = x + w * 0.5 + pad;
+              const half = w * 0.5 + pad;
+              x = clamp(x, half + 2, width - half - 2);
+              const x0 = x - half;
+              const x1 = x + half;
               if (!collides(lane, x0, x1)) {
                 label = text;
                 labelWidth = w;
@@ -95,12 +108,14 @@ export function buildTicks(
               }
             }
             if (isDay) {
-              ticks.push({ t, x: xTick, unit: "day", major: true, boundary: true, drawTick: true, labelWidth: 0 });
-              if (label) ticks.push({ t: labelT, x, unit: "day", major: false, drawTick: false, label, labelWidth });
+              if (xTick >= -80 && xTick <= width + 80) {
+                ticks.push({ t, x: xTick, unit: "day", major: true, boundary: true, drawTick: true, labelWidth: 0 });
+              }
+              if (label) ticks.push({ t, x, unit: "day", major: false, drawTick: false, label, labelWidth });
             } else {
               const near = ticks.find((tk) => tk.drawTick !== false && Math.abs(tk.x - xTick) < 4);
               if (near) {
-                if (label) ticks.push({ t: labelT, x, unit: level.unit, major: false, drawTick: false, label, labelWidth });
+                if (label) ticks.push({ t, x, unit: level.unit, major: false, drawTick: false, label, labelWidth });
               } else {
                 ticks.push({ t, x: xTick, unit: level.unit, major: level.major && localPx >= 16, label, labelWidth, drawTick: true });
                 if (level.major) usedMajorX.push(xTick);
