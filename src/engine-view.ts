@@ -165,13 +165,15 @@ this.ticks = buildTicks(this.tLeft(), this.tRight(), this.spanMs, (t) => this.ti
 this.ctx.letterSpacing = "0px";
 }
 stepLabelLanes(dt: number) {
-let chipTop = this.lineY() - 34;
+const ly = this.lineY();
+let chipTop = Infinity;
 for (const p of this.placed) {
-if (p.clustered || p.event.kind === "milestone") continue;
+if (p.clustered || p.event.kind !== "event") continue;
 if (p.x1 < -20 || p.x0 > this.width + 20) continue;
+if (p.y >= ly) continue;
 chipTop = Math.min(chipTop, p.y);
 }
-const targetAnchor = Math.max(28, chipTop - 8);
+const targetAnchor = chipTop === Infinity ? ly - 16 : Math.max(28, chipTop - 8);
 const kA = this.reducedMotion ? 48 : 9.5;
 this.labelAnchor += (targetAnchor - this.labelAnchor) * expDamp(kA, dt);
 const present = {
