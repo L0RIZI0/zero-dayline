@@ -51,6 +51,26 @@ export function drawHorizonSun(
 	}
 	ctx.restore();
 }
+/** Filled crescent, tips up-left. Two-arc bite — no extra strokes. */
+export function drawCrescent(
+	ctx: CanvasRenderingContext2D,
+	cx: number,
+	cy: number,
+	r: number,
+	color: string,
+	rot = -0.4,
+) {
+	ctx.save();
+	ctx.translate(cx, cy);
+	ctx.rotate(rot);
+	ctx.fillStyle = color;
+	ctx.beginPath();
+	ctx.arc(0, 0, r, Math.PI * 0.5, Math.PI * 1.5, false);
+	ctx.arc(r * 0.42, 0, r * 0.68, Math.PI * 1.5, Math.PI * 0.5, true);
+	ctx.closePath();
+	ctx.fill();
+	ctx.restore();
+}
 export function drawHorizonMoon(
 	ctx: CanvasRenderingContext2D,
 	x: number,
@@ -60,38 +80,19 @@ export function drawHorizonMoon(
 	color: string,
 ) {
 	const cx = x + s * 0.5;
-	const hz = cy + (kind === "rise" ? s * 0.12 : s * 0.08);
+	const hz = cy + s * 0.1;
 	ctx.save();
 	ctx.strokeStyle = color;
-	ctx.fillStyle = color;
 	ctx.lineWidth = 1.15;
 	ctx.lineCap = "round";
-	ctx.lineJoin = "round";
 	ctx.beginPath();
 	ctx.moveTo(x + 0.5, hz);
 	ctx.lineTo(x + s - 0.5, hz);
 	ctx.stroke();
 	ctx.beginPath();
-	const r = s * 0.26;
-	const my = hz - (kind === "rise" ? r * 0.35 : r * 0.15);
-	ctx.arc(cx, my, r, 0.55, Math.PI * 2 - 0.55);
-	ctx.arc(cx + r * 0.42, my - r * 0.08, r * 0.78, Math.PI * 1.12, Math.PI * 0.88, true);
-	ctx.closePath();
-	ctx.stroke();
-	if (kind === "rise") {
-		for (const a of [-2.4, -Math.PI / 2, -0.7]) {
-			ctx.beginPath();
-			ctx.moveTo(cx + Math.cos(a) * s * 0.4, hz + Math.sin(a) * s * 0.22 - r);
-			ctx.lineTo(cx + Math.cos(a) * s * 0.54, hz + Math.sin(a) * s * 0.32 - r);
-			ctx.stroke();
-		}
-	} else {
-		ctx.beginPath();
-		ctx.moveTo(cx - 2.2, hz + s * 0.34);
-		ctx.lineTo(cx, hz + s * 0.5);
-		ctx.lineTo(cx + 2.2, hz + s * 0.34);
-		ctx.stroke();
-	}
+	ctx.rect(x - 1, cy - s, s + 2, hz - (cy - s));
+	ctx.clip();
+	drawCrescent(ctx, cx, hz - (kind === "rise" ? s * 0.08 : s * 0.02), s * 0.32, color, -0.4);
 	ctx.restore();
 }
 export function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
