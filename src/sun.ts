@@ -133,9 +133,10 @@ export function moonUnit(t: number): number {
 export function sunKnots(tL: number, tR: number): number[] {
   const out: number[] = [];
   const d0 = startOfDay(tL - DAY);
-  const d1 = startOfDay(tR) + DAY;
-  const dMax = d0 + 16 * DAY;
-  for (let d = d0; d <= d1 && d <= dMax; d += DAY) {
+  const d1 = startOfDay(tR) + 2 * DAY;
+  const nMax = Math.min(90, Math.max(4, Math.ceil((tR - tL) / DAY) + 4));
+  let n = 0;
+  for (let d = d0; d <= d1 && n < nMax; d += DAY, n++) {
     const { rise, set } = sunTimes(d);
     const next = sunTimes(d + DAY);
     out.push(rise, (rise + set) / 2, set, (set + next.rise) / 2);
@@ -146,7 +147,8 @@ export function sunKnots(tL: number, tR: number): number[] {
 export function moonKnots(tL: number, tR: number): number[] {
   const out: number[] = [];
   const k0 = moonKFloor(tL) - 1;
-  const k1 = Math.min(moonKFloor(tR) + 1, k0 + 16);
+  const nMax = Math.min(90, Math.max(4, Math.ceil((tR - tL) / DAY) + 4));
+  const k1 = k0 + nMax;
   for (let k = k0; k <= k1; k++) {
     const p = passageK(k);
     const next = passageK(k + 1);

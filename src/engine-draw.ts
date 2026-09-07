@@ -82,12 +82,12 @@ knots: (tL: number, tR: number) => number[],
 const { width, spanMs } = this;
 const kDaily = this.skyK();
 const amp = this.skyAmp(kDaily);
-const pad = spanMs * 0.12;
-const tL = this.centerT - spanMs * 0.5 - pad;
-const tR = this.centerT + spanMs * 0.5 + pad;
+const pad = spanMs * 0.15;
+const tL = this.tLeft() - pad;
+const tR = this.tRight() + pad;
 let times: number[];
 if (kDaily > 0.2) {
-times = knots(tL, tR).filter((t) => t >= tL && t <= tR);
+times = knots(tL, tR);
 } else {
 const n = 8;
 times = [];
@@ -103,10 +103,17 @@ const den = this.liveDen || 1;
 const cx = width * 0.5;
 const sigma = Math.max(90, width * 0.32);
 const sigma2 = sigma * sigma;
+const projected: { t: number; x: number }[] = [];
+for (const t of uniq) projected.push({ t, x: this.timeToX(t) });
+let lo = 0;
+let hi = projected.length - 1;
+while (lo < projected.length && projected[lo].x < -80) lo += 1;
+while (hi >= 0 && projected[hi].x > width + 80) hi -= 1;
+lo = Math.max(0, lo - 1);
+hi = Math.min(projected.length - 1, hi + 1);
 const knotsOut: SkyKnot[] = [];
-for (const t of uniq) {
-const x = this.timeToX(t);
-if (x < -80 || x > width + 80) continue;
+for (let i = lo; i <= hi; i++) {
+const { t, x } = projected[i];
 const { h, dh } = evalAt(t);
 const u = x - cx;
 const env = 0.62 + 0.38 * Math.exp(-0.5 * (u * u) / sigma2);
