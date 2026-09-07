@@ -4,7 +4,7 @@ import { daysInMonth, zonedDate, zonedParts } from "./time";
 
 function catOf(kind: DaylineKind): EventCategory {
   if (kind === "task") return "work";
-  if (kind === "moment") return "focus";
+  if (kind === "moment" || kind === "instant") return "focus";
   if (kind === "space") return "life";
   return "personal";
 }

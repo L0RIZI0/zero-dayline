@@ -48,7 +48,8 @@ import type {
   DaylineTheme,
 } from "./contract";
 import { marksToEvents } from "./marks";
-import { drawGlyph } from "./glyphDraw";
+import { ongoingAngle } from "./glyphDraw";
+import { SPIN } from "./glyphs";
 
 export type EngineHost = {
   onChange: (s: DaylineSnapshot) => void;
@@ -98,6 +99,18 @@ try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch {}
 }
 export const LANE_ORDER: LabelLane[] = ["time", "day", "month", "year"];
 export const LANE_ROW = 17;
+
+export type GlyphFx = {
+spinOnceAt?: number;
+flashAt?: number;
+flashDur?: number;
+seenSpinOnce?: number;
+seenFlash?: number;
+ongoingSince?: number;
+landingFrom?: number;
+landingAt?: number;
+wasOngoing?: boolean;
+};
 
 export interface EngineCore {
 frame(ts: number): void;
@@ -236,6 +249,7 @@ bootData: DaylineData | null = null;
 pendingData: DaylineData | null = null;
 source: "demo" | "sample" = "demo";
 lastIntent: string | null = null;
+glyphFx = new Map<string, GlyphFx>();
 constructor(canvas: HTMLCanvasElement, host: EngineHost, opts: EngineOptions = {}) {
 this.canvas = canvas;
 const ctx = canvas.getContext("2d", { alpha: false });
@@ -472,8 +486,10 @@ this.pendingData = data;
 return;
 }
 this.pendingData = null;
+const prevIds = new Set(this.events.map((e) => e.id));
 const keepView = this.events.length > 0;
 this.events = marksToEvents(data);
+this.noteGlyphFx(prevIds, keepView);
 for (const e of this.events) if (e.openEnded) e.end = this.now;
 this.dirtyWarp = true;
 this.rebuildWarp();
@@ -490,6 +506,57 @@ this.stepLabelLanes(1);
 this.stepLabelFade(1);
 if (this.width >= 16 && this.height >= 16) this.draw();
 this.emit();
+}
+noteGlyphFx(prevIds: Set<string>, keepView: boolean) {
+const now = performance.now();
+const live = new Set<string>();
+for (const e of this.events) {
+const mark = e.mark;
+if (!mark) continue;
+live.add(e.id);
+const fx = this.glyphFx.get(e.id) ?? {};
+const ongoing = !!(e.ongoing || mark.glyph.ongoing);
+if (mark.glyph.spinOnce != null) {
+if (fx.seenSpinOnce != null && mark.glyph.spinOnce > fx.seenSpinOnce && !this.reducedMotion) {
+fx.spinOnceAt = now;
+fx.flashAt = now;
+fx.flashDur = SPIN.fullTurnMs;
+}
+fx.seenSpinOnce = mark.glyph.spinOnce;
+}
+if (mark.glyph.flashFill != null) {
+if (fx.seenFlash != null && mark.glyph.flashFill > fx.seenFlash && !this.reducedMotion) {
+fx.flashAt = now;
+fx.flashDur = SPIN.flashMs;
+}
+fx.seenFlash = mark.glyph.flashFill;
+}
+if (keepView && !prevIds.has(e.id) && !this.reducedMotion) {
+const instant = !!(e.point || mark.instant || mark.kind === "instant" || mark.glyph.kind === "instant");
+fx.flashAt = now;
+if (instant) {
+fx.spinOnceAt = now;
+fx.flashDur = SPIN.fullTurnMs;
+} else {
+fx.flashDur = SPIN.flashMs;
+}
+}
+if (fx.wasOngoing && !ongoing && !this.reducedMotion) {
+fx.landingFrom = fx.ongoingSince != null ? ongoingAngle(now - fx.ongoingSince) : 0;
+fx.landingAt = now;
+fx.ongoingSince = undefined;
+fx.flashAt = now;
+fx.flashDur = SPIN.flashMs;
+}
+if (!fx.wasOngoing && ongoing) {
+fx.ongoingSince = now;
+fx.landingAt = undefined;
+fx.spinOnceAt = undefined;
+}
+fx.wasOngoing = ongoing;
+this.glyphFx.set(e.id, fx);
+}
+for (const id of [...this.glyphFx.keys()]) if (!live.has(id)) this.glyphFx.delete(id);
 }
 setContractTheme(theme: DaylineTheme) {
 this.applyTheme(theme);

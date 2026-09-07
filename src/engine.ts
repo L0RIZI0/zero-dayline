@@ -3,13 +3,44 @@ import { EngineDraw } from "./engine-draw";
 import type { CalEvent, PlacedChip } from "./types";
 import { C, colorOf, FONT_DISPLAY, FONT_MONO, FONT_UI, inkOn } from "./theme";
 import { clamp, formatHm, formatRange, lerp, smoothstep, DAY } from "./time";
-import { drawGlyph } from "./glyphDraw";
+import { drawGlyph, type GlyphDrawFlags } from "./glyphDraw";
 import { drawHorizonSun, roundRect } from "./engine-util";
 
 export class DaylineEngine extends EngineDraw {
 constructor(canvas: HTMLCanvasElement, host: import("./engine-core").EngineHost, opts: import("./engine-core").EngineOptions = {}) {
 super(canvas, host, opts);
 this.startLoop();
+}
+glyphFlags(e: CalEvent, size: number, cx: number, cy: number, bg: string): GlyphDrawFlags {
+const mark = e.mark!;
+const g = mark.glyph;
+const fx = this.glyphFx.get(e.id);
+const filled = !!g.filled;
+const scheduled =
+g.scheduled ?? (mark.track === "planned" && !e.ongoing && e.start > this.now && !filled && !g.done);
+return {
+kind: g.kind,
+accent: this.accentOf(e),
+bg,
+size,
+cx,
+cy,
+ongoing: !!(e.ongoing || g.ongoing),
+flip180: !!g.flip180,
+done: !!g.done,
+cancelled: !!(e.cancelled || g.cancelled),
+filled,
+scheduled,
+requested: !!g.requested,
+timeMs: this.lastTs || performance.now(),
+reducedMotion: this.reducedMotion,
+spinOnceAt: fx?.spinOnceAt,
+flashAt: fx?.flashAt,
+flashDur: fx?.flashDur,
+ongoingSince: fx?.ongoingSince,
+landingFrom: fx?.landingFrom,
+landingAt: fx?.landingAt,
+};
 }
 draw() {
 const { ctx, width, height } = this;
@@ -70,22 +101,7 @@ const gSize = Math.min(16, p.h - 4);
 const gx = x + 4 + gSize / 2;
 const gy = p.y + p.h / 2;
 ctx.globalAlpha = ghost;
-drawGlyph(ctx, {
-kind: mark.glyph.kind,
-accent: col,
-bg: C.bg,
-size: gSize,
-cx: gx,
-cy: gy,
-ongoing: !!(e.ongoing || mark.glyph.ongoing),
-flip180: !!mark.glyph.flip180,
-done: !!mark.glyph.done,
-cancelled: !!(e.cancelled || mark.glyph.cancelled),
-filled: !!mark.glyph.done,
-scheduled: mark.track === "planned" && !e.ongoing && e.start > this.now && !mark.glyph.done,
-timeMs: performance.now(),
-reducedMotion: this.reducedMotion,
-});
+drawGlyph(ctx, this.glyphFlags(e, gSize, gx, gy, C.bg));
 if (w > 40) {
 ctx.font = `500 12px ${FONT_UI}`;
 ctx.fillStyle = C.fg;
@@ -206,25 +222,9 @@ const sel = p.event.id === this.selectedId;
 const fade = this.chipAlpha(p.event.id);
 ctx.save();
 if (p.event.mark) {
-const col = this.accentOf(p.event);
 const ghost = (p.event.cancelled ? 0.4 : 1) * fade;
 ctx.globalAlpha = ghost;
-drawGlyph(ctx, {
-kind: p.event.mark.glyph.kind,
-accent: col,
-bg: C.bg,
-size: 18,
-cx: x,
-cy: ly,
-ongoing: !!(p.event.ongoing || p.event.mark.glyph.ongoing),
-flip180: !!p.event.mark.glyph.flip180,
-done: !!p.event.mark.glyph.done,
-cancelled: !!(p.event.cancelled || p.event.mark.glyph.cancelled),
-filled: !!p.event.mark.glyph.done,
-scheduled: p.event.start > this.now,
-timeMs: performance.now(),
-reducedMotion: this.reducedMotion,
-});
+drawGlyph(ctx, this.glyphFlags(p.event, 18, x, ly, C.bg));
 if (sel) {
 ctx.strokeStyle = C.selection;
 ctx.globalAlpha = fade;
@@ -372,22 +372,7 @@ ctx.fill();
 ctx.strokeStyle = C.line;
 ctx.stroke();
 if (mark) {
-drawGlyph(ctx, {
-kind: mark.glyph.kind,
-accent: this.accentOf(ev),
-bg: C.bgElevated,
-size: gSize,
-cx: x + 8 + gSize / 2,
-cy: y + (sub || dur ? 14 : h / 2),
-ongoing: !!(ev.ongoing || mark.glyph.ongoing),
-flip180: !!mark.glyph.flip180,
-done: !!mark.glyph.done,
-cancelled: !!(ev.cancelled || mark.glyph.cancelled),
-filled: !!mark.glyph.done,
-scheduled: mark.track === "planned" && !ev.ongoing && ev.start > this.now && !mark.glyph.done,
-timeMs: this.lastTs,
-reducedMotion: this.reducedMotion,
-});
+drawGlyph(ctx, this.glyphFlags(ev, gSize, x + 8 + gSize / 2, y + (sub || dur ? 14 : h / 2), C.bgElevated));
 }
 ctx.fillStyle = C.fg;
 ctx.font = `500 12px ${FONT_UI}`;
