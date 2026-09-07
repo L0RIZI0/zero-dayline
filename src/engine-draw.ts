@@ -41,7 +41,7 @@ const pxPerDay = this.width / (this.spanMs / DAY);
 return clamp((pxPerDay - 4) / 12, 0, 1);
 }
 skyAmp(kDaily: number) {
-return kDaily * 78 + (1 - kDaily) * 40;
+return kDaily * 64 + (1 - kDaily) * 32;
 }
 skyEnv(x: number) {
 const cx = this.width * 0.5;
@@ -175,9 +175,9 @@ ctx.restore();
 }
 drawSun(ly: number) {
 const u = smoothstep(this.sunHoverA);
-const strokeA = lerp(.38, 1, u);
-const dayFillA = lerp(.045, .11, u);
-const nightFillA = lerp(.03, .08, u);
+const strokeA = lerp(.24, 1, u);
+const dayFillA = lerp(.028, .11, u);
+const nightFillA = lerp(.018, .08, u);
 const k = this.skyK();
 const segs = this.skyCubics(ly, (t) => {
 const s = sunEval(t);
@@ -195,9 +195,9 @@ strokeA,
 }
 drawMoon(ly: number) {
 const u = smoothstep(this.moonHoverA);
-const strokeA = lerp(.42, 1, u);
-const upFillA = lerp(.05, .12, u);
-const downFillA = lerp(.03, .07, u);
+const strokeA = lerp(.26, 1, u);
+const upFillA = lerp(.03, .12, u);
+const downFillA = lerp(.018, .07, u);
 const k = this.skyK();
 const segs = this.skyCubics(ly, (t) => {
 const m = moonEval(t);
