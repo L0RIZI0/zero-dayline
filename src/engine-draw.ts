@@ -278,11 +278,7 @@ if (zx < -16 || zx > this.width + 16) return;
 const k = this.skyK();
 const zy = this.skyY(this.lineY(), transit, zx, moonEval(transit).h * k);
 const cy = Math.max(r + 4, zy - r - 4);
-const { ctx } = this;
-ctx.save();
-ctx.globalAlpha = alpha;
-drawMoonPhase(ctx, zx, cy, r, moonPhase(transit));
-ctx.restore();
+drawMoonPhase(this.ctx, zx, cy, r, moonPhase(transit), undefined, undefined, alpha);
 }
 drawMoonNewFull() {
 if (this.skyK() < 0.15 || this.moonVisA < .05) return;
