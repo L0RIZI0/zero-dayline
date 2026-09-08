@@ -423,10 +423,14 @@ drawHorizonSun(ctx, x + 8, y2, icon, "set", C.muted);
 ctx.fillText(set, x + 8 + icon + gap, y2);
 ctx.restore();
 }
-drawSunCursor(cx: number, cy: number) {
+drawSunCursor(cx: number, cyHit: number) {
 const { ctx } = this;
 const a = smoothstep(this.sunHoverA);
 const r = lerp(9, 13, a);
+const s = 1.45;
+const p = a - 1;
+const pop = p * p * ((s + 1) * p + s) + 1;
+const cy = cyHit - r - 10 + (1 - pop) * 9;
 const rot = ((this.lastTs % 6000) / 6000) * Math.PI * 2;
 ctx.save();
 ctx.translate(cx, cy);
@@ -440,12 +444,12 @@ ctx.beginPath();
 for (let i = 0; i < 8; i++) {
 const ang = (i * Math.PI) / 4;
 const c = Math.cos(ang);
-const s = Math.sin(ang);
-const p = Math.cos(ang + Math.PI / 2);
-const q = Math.sin(ang + Math.PI / 2);
-ctx.moveTo(c * r, s * r);
-ctx.lineTo(c * r * 0.5 + p * r * 0.15, s * r * 0.5 + q * r * 0.15);
-ctx.lineTo(c * r * 0.5 - p * r * 0.15, s * r * 0.5 - q * r * 0.15);
+const si = Math.sin(ang);
+const q = Math.cos(ang + Math.PI / 2);
+const u = Math.sin(ang + Math.PI / 2);
+ctx.moveTo(c * r, si * r);
+ctx.lineTo(c * r * 0.5 + q * r * 0.15, si * r * 0.5 + u * r * 0.15);
+ctx.lineTo(c * r * 0.5 - q * r * 0.15, si * r * 0.5 - u * r * 0.15);
 ctx.closePath();
 }
 ctx.fill();
