@@ -96,8 +96,8 @@ export function drawMoonPhase(
 	ctx.restore();
 	ctx.beginPath();
 	ctx.arc(0, 0, r - 0.4, 0, Math.PI * 2);
-	ctx.strokeStyle = "rgba(190,210,235,0.35)";
-	ctx.lineWidth = 0.8;
+	ctx.strokeStyle = "rgba(210,224,245,0.85)";
+	ctx.lineWidth = 1.15;
 	ctx.stroke();
 	ctx.restore();
 }
