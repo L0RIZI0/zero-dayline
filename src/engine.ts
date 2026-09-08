@@ -4,8 +4,8 @@ import type { CalEvent, PlacedChip } from "./types";
 import { C, colorOf, FONT_DISPLAY, FONT_MONO, FONT_UI, inkOn } from "./theme";
 import { clamp, formatHm, formatRange, lerp, smoothstep, DAY } from "./time";
 import { drawGlyph, type GlyphDrawFlags } from "./glyphDraw";
-import { drawHorizonSun, drawHorizonMoon, drawCrescent, roundRect } from "./engine-util";
-import { sunRgb, rgbCss } from "./sun";
+import { drawHorizonSun, drawHorizonMoon, drawMoonPhase, roundRect } from "./engine-util";
+import { sunRgb, rgbCss, moonPassage, moonPhase, moonEval } from "./sun";
 
 export class DaylineEngine extends EngineDraw {
 constructor(canvas: HTMLCanvasElement, host: import("./engine-core").EngineHost, opts: import("./engine-core").EngineOptions = {}) {
@@ -321,7 +321,7 @@ ctx.restore();
 drawHoverTip() {
 this.ctx.letterSpacing = "0px";
 if (this.sunHoverA > .012 && this.hoverSun) this.drawSunCursor(this.hoverSun.px, this.hoverSun.py);
-if (this.moonHoverA > .012 && this.hoverMoon) this.drawMoonCursor(this.hoverMoon.px, this.hoverMoon.py);
+if (this.moonHoverA > .012 && this.hoverMoon) this.drawMoonZenith();
 if (this.mode === "none" && this.sunHover && this.hoverSun && !this.hoverId) {
 this.drawSunTip();
 return;
@@ -488,14 +488,33 @@ drawHorizonMoon(ctx, x + 8, y2, icon, "set", C.muted);
 ctx.fillText(set, x + 8 + icon + gap, y2);
 ctx.restore();
 }
-drawMoonCursor(cx: number, cy: number) {
-const { ctx } = this;
+drawMoonZenith() {
+if (this.skyK() < 0.15) return;
+const t = this.xToTime(this.cursorX);
+const p = moonPassage(t);
+const cands = [p, moonPassage(p.rise - 1), moonPassage(p.set + 1)];
+let best = p;
+let bestD = Infinity;
+for (const c of cands) {
+const x = this.timeToX(c.transit);
+const d = Math.abs(x - this.cursorX);
+if (d < bestD) {
+bestD = d;
+best = c;
+}
+}
+const zx = this.timeToX(best.transit);
+if (zx < -24 || zx > this.width + 24) return;
+const k = this.skyK();
+const h = moonEval(best.transit).h * k;
+const zy = this.skyY(this.lineY(), best.transit, zx, h);
 const a = smoothstep(this.moonHoverA);
-const r = lerp(8, 11, a);
+const r = lerp(11, 15, a);
+const cy = Math.max(r + 4, zy - r - 7);
+const { ctx } = this;
 ctx.save();
 ctx.globalAlpha = a;
-drawCrescent(ctx, cx, cy, r, "rgb(168,196,236)", -0.4);
+drawMoonPhase(ctx, zx, cy, r, moonPhase(best.transit));
 ctx.restore();
 }
-
 }

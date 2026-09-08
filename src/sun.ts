@@ -7,6 +7,7 @@ const NEW_MOON = Date.UTC(2000, 0, 6, 18, 14, 0);
 /** Mean time between lunar transits (~24h 50.5m). */
 const LUNAR_DAY = 24.841666 * HOUR;
 const TROPICAL_MONTH = 27.321661 * DAY;
+const SYNODIC = 29.530588853 * DAY;
 
 function clamp(n: number, a: number, b: number) {
   return Math.max(a, Math.min(b, n));
@@ -136,6 +137,12 @@ export function moonPassage(t: number): { rise: number; set: number; transit: nu
 export function moonTimes(ms: number): { rise: number; set: number } {
   const p = moonPassage(ms);
   return { rise: p.rise, set: p.set };
+}
+
+/** 0 new → 0.25 first quarter → 0.5 full → 0.75 last quarter. */
+export function moonPhase(t: number): number {
+  const u = (t - NEW_MOON) / SYNODIC;
+  return u - Math.floor(u);
 }
 
 function moonPair(t: number) {

@@ -51,7 +51,56 @@ export function drawHorizonSun(
 	}
 	ctx.restore();
 }
-/** Filled crescent, tips up-left. Two-arc bite — no extra strokes. */
+/** Spherical moon. `phase` 0 new, 0.5 full, waxing is right-lit. */
+export function drawMoonPhase(
+	ctx: CanvasRenderingContext2D,
+	cx: number,
+	cy: number,
+	r: number,
+	phase: number,
+	lit = "rgb(214,224,242)",
+	shade = "rgb(36,42,58)",
+) {
+	const u = ((phase % 1) + 1) % 1;
+	const s = Math.cos(u * Math.PI * 2);
+	ctx.save();
+	ctx.translate(cx, cy);
+	ctx.beginPath();
+	ctx.arc(0, 0, r, 0, Math.PI * 2);
+	ctx.fillStyle = shade;
+	ctx.fill();
+	ctx.save();
+	ctx.beginPath();
+	ctx.arc(0, 0, r, 0, Math.PI * 2);
+	ctx.clip();
+	ctx.fillStyle = lit;
+	if (u <= 0.5) {
+		ctx.beginPath();
+		ctx.arc(0, 0, r, -Math.PI / 2, Math.PI / 2, false);
+		ctx.closePath();
+		ctx.fill();
+		ctx.beginPath();
+		ctx.ellipse(0, 0, Math.abs(s) * r, r, 0, 0, Math.PI * 2);
+		ctx.fillStyle = s > 0 ? shade : lit;
+		ctx.fill();
+	} else {
+		ctx.beginPath();
+		ctx.arc(0, 0, r, Math.PI / 2, -Math.PI / 2, false);
+		ctx.closePath();
+		ctx.fill();
+		ctx.beginPath();
+		ctx.ellipse(0, 0, Math.abs(s) * r, r, 0, 0, Math.PI * 2);
+		ctx.fillStyle = s < 0 ? lit : shade;
+		ctx.fill();
+	}
+	ctx.restore();
+	ctx.beginPath();
+	ctx.arc(0, 0, r - 0.4, 0, Math.PI * 2);
+	ctx.strokeStyle = "rgba(190,210,235,0.35)";
+	ctx.lineWidth = 0.8;
+	ctx.stroke();
+	ctx.restore();
+}
 export function drawCrescent(
 	ctx: CanvasRenderingContext2D,
 	cx: number,
