@@ -505,7 +505,7 @@ const s = 1.45;
 const p = a - 1;
 const pop = p * p * ((s + 1) * p + s) + 1;
 const cx = moon.px;
-const cy = moon.py - r - 4 + (1 - pop) * 9;
+const cy = moon.py - r - 10 + (1 - pop) * 9;
 drawMoonPhase(this.ctx, cx, cy, r, moonPhase(this.xToTime(this.cursorX)), undefined, undefined, a);
 }
 }
