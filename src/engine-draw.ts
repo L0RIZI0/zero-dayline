@@ -25,16 +25,18 @@ this.ctx.fillStyle = g;
 this.ctx.fillRect(nowX - hw, 0, hw * 2, this.bandHeight());
 }
 hitSun(x: number, y: number): { rise: number; set: number; px: number; py: number } | null {
-if (!this.showSun) return null;
+if (this.sunVisA < .4) return null;
 const hovered = this.sunHover || this.sunHoverA > .18;
 const k = this.skyK();
-return this.hitSky(x, y, (t) => sunEval(t).h * k + (1 - k) * seasonSigned(t), (t) => sunTimes(t), hovered ? 8 : 5);
+const v = this.sunVisA;
+return this.hitSky(x, y, (t) => v * (sunEval(t).h * k + (1 - k) * seasonSigned(t)), (t) => sunTimes(t), hovered ? 8 : 5);
 }
 hitMoon(x: number, y: number): { rise: number; set: number; px: number; py: number } | null {
-if (!this.showMoon) return null;
+if (this.moonVisA < .4) return null;
 const hovered = this.moonHover || this.moonHoverA > .18;
 const k = this.skyK();
-return this.hitSky(x, y, (t) => moonEval(t).h * k, (t) => moonTimes(t), hovered ? 8 : 5);
+const v = this.moonVisA;
+return this.hitSky(x, y, (t) => v * moonEval(t).h * k, (t) => moonTimes(t), hovered ? 8 : 5);
 }
 skyK() {
 const pxPerDay = this.width / (this.spanMs / DAY);
@@ -174,7 +176,7 @@ ctx.lineTo(s.x3, ly);
 ctx.closePath();
 if (colorAt) {
 const mid = colorAt((s.t0 + s.t3) * 0.5);
-const a = above ? 0.07 : 0.04;
+const a = (above ? 0.07 : 0.04) * this.sunVisA;
 ctx.fillStyle = rgbCss(mid, a);
 } else {
 ctx.fillStyle = above ? upFill : downFill;
@@ -211,42 +213,42 @@ ctx.stroke();
 ctx.restore();
 }
 drawSun(ly: number) {
+const v = this.sunVisA;
+if (v < .01) return;
 const u = smoothstep(this.sunHoverA);
-const strokeA = lerp(.24, 1, u);
-const dayFillA = lerp(.028, .11, u);
-const nightFillA = lerp(.018, .08, u);
+const strokeA = lerp(.24, 1, u) * v;
 const k = this.skyK();
 const segs = this.skyCubics(ly, (t) => {
 const s = sunEval(t);
-return { h: k * s.h + (1 - k) * seasonSigned(t), dh: k * s.dh };
+return { h: v * (k * s.h + (1 - k) * seasonSigned(t)), dh: v * k * s.dh };
 }, sunKnots);
 this.paintSkyCubics(
 segs,
 ly,
 rgbCss(SUN_GOLD),
-`rgba(228,196,78,${dayFillA})`,
-`rgba(90,96,132,${nightFillA})`,
+`rgba(228,196,78,${lerp(.028, .11, u) * v})`,
+`rgba(90,96,132,${lerp(.018, .08, u) * v})`,
 strokeA,
 !this.skyBusy(),
 k > 0.2 ? sunRgb : undefined,
 );
 }
 drawMoon(ly: number) {
+const v = this.moonVisA;
+if (v < .01) return;
 const u = smoothstep(this.moonHoverA);
-const strokeA = lerp(.26, 1, u);
-const upFillA = lerp(.03, .12, u);
-const downFillA = lerp(.018, .07, u);
+const strokeA = lerp(.26, 1, u) * v;
 const k = this.skyK();
 const segs = this.skyCubics(ly, (t) => {
 const m = moonEval(t);
-return { h: k * m.h, dh: k * m.dh };
+return { h: v * k * m.h, dh: v * k * m.dh };
 }, moonKnots);
 this.paintSkyCubics(
 segs,
 ly,
 "rgba(140,175,230,1)",
-`rgba(110,150,210,${upFillA})`,
-`rgba(40,60,110,${downFillA})`,
+`rgba(110,150,210,${lerp(.03, .12, u) * v})`,
+`rgba(40,60,110,${lerp(.018, .07, u) * v})`,
 strokeA,
 !this.skyBusy(),
 );
@@ -265,12 +267,12 @@ drawMoonPhase(ctx, zx, cy, r, moonPhase(transit));
 ctx.restore();
 }
 drawMoonNewFull() {
-if (this.skyK() < 0.15) return;
+if (this.skyK() < 0.15 || this.moonVisA < .05) return;
 const tL = this.tLeft() - 2 * DAY;
 const tR = this.tRight() + 2 * DAY;
 for (const e of moonPhaseEvents(tL, tR)) {
 const p = moonPassage(e.t);
-this.paintMoonAt(p.transit, 6, 0.95);
+this.paintMoonAt(p.transit, 6, 0.95 * this.moonVisA);
 }
 }
 drawCoil(ly: number) {

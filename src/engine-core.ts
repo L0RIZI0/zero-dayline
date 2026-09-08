@@ -251,6 +251,9 @@ moonHoverA = 0;
 hoverMoon: { rise: number; set: number; px: number; py: number } | null = null;
 showSun = true;
 showMoon = false;
+sunVisA = 1;
+moonVisA = 0;
+skyVisInited = false;
 persistEvents = true;
 clockMode: "wall" | "data" = "wall";
 nowRestFraction = 0.5;
@@ -507,6 +510,11 @@ this.events = marksToEvents(data);
 this.noteGlyphFx(prevIds, keepView);
 this.showSun = data.sky?.sun !== false;
 this.showMoon = !!data.sky?.moon;
+if (!this.skyVisInited) {
+this.sunVisA = this.showSun ? 1 : 0;
+this.moonVisA = this.showMoon ? 1 : 0;
+this.skyVisInited = true;
+}
 for (const e of this.events) if (e.openEnded) e.end = this.now;
 this.dirtyWarp = true;
 this.rebuildWarp();
