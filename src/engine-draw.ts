@@ -173,6 +173,7 @@ downFill: string,
 strokeA: number,
 fill: boolean,
 colorAt?: (t: number) => [number, number, number],
+dash?: number[],
 ) {
 const { ctx } = this;
 if (!segs.length) return;
@@ -208,6 +209,7 @@ ctx.lineWidth = 1.3;
 ctx.globalAlpha = strokeA;
 ctx.lineJoin = "round";
 ctx.lineCap = "round";
+if (dash) ctx.setLineDash(dash);
 if (colorAt) {
 for (const s of segs) {
 const g = ctx.createLinearGradient(s.x0, s.y0, s.x3, s.y3);
@@ -269,6 +271,8 @@ ly,
 `rgba(40,60,110,${lerp(.018, .07, u) * v})`,
 strokeA,
 !this.skyBusy(),
+undefined,
+[0, 2.7],
 );
 this.drawMoonNewFull();
 }
