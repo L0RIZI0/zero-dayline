@@ -28,6 +28,9 @@ export function labelLane(unit: TickUnit): LabelLane {
   return "day";
 }
 
+/** Extra px past the canvas so a vis-centered day name can bleed off instead of popping. */
+const DAY_BLEED = 120;
+
 function labelMinPx(unit: TickUnit, spanMs: number): number {
   if (unit === "hour" && spanMs < 2 * 86_400_000) return 28;
   if (unit === "hour") return 44;
@@ -78,17 +81,11 @@ export function buildTicks(
       if (isDay) {
         xDay0 = xTick;
         xDay1 = timeToX(t + approx);
-        vis0 = Math.max(xDay0, 0);
-        vis1 = Math.min(xDay1, width);
-        const trueX = (xDay0 + xDay1) * 0.5;
-        const visPx = vis1 - vis0;
-        // Zoomed in past one day filling the view: park in the remaining slice.
-        // Otherwise pin to the day's real center so the name slides off the edge.
-        x = (trueX < 0 || trueX > width) && visPx > width * 0.4
-          ? (vis0 + vis1) * 0.5
-          : trueX;
+        vis0 = Math.max(xDay0, -DAY_BLEED);
+        vis1 = Math.min(xDay1, width + DAY_BLEED);
+        x = vis1 > vis0 ? (vis0 + vis1) * 0.5 : xTick;
       }
-      if (xTick >= -80 && xTick <= width + 80 || isDay && vis1 > vis0 || isDay && x > -120 && x < width + 120) {
+      if ((xTick >= -80 && xTick <= width + 80) || (isDay && vis1 > vis0)) {
         const localPx = isDay ? Math.abs(xDay1 - xDay0) : Math.abs(timeToX(t + approx) - xTick);
         const room = level.major ? 7 : 3.5;
         if (localPx >= room || isDay) {
@@ -106,10 +103,13 @@ export function buildTicks(
               if (overlaps) {
                 const x0 = x - half;
                 const x1 = x + half;
-                if (!collides(lane, x0, x1)) {
+                const nearEdge = isDay && (x < half || x > width - half);
+                const c0 = isDay ? Math.max(x0, 0) : x0;
+                const c1 = isDay ? Math.min(x1, width) : x1;
+                if (nearEdge || !collides(lane, c0, c1)) {
                   label = text;
                   labelWidth = w;
-                  usedLabel[lane].push({ x0, x1 });
+                  if (!nearEdge) usedLabel[lane].push({ x0: c0, x1: c1 });
                 }
               }
             }
