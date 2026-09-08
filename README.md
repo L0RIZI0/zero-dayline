@@ -3,7 +3,7 @@
 Canvas dayline engine. Zero installs a **pinned tag**:
 
 ```json
-"@zero/dayline": "github:L0RIZI0/zero-dayline#v0.7.23"
+"@zero/dayline": "github:L0RIZI0/zero-dayline#v0.7.24"
 ```
 
 Add `@zero/dayline` to Next.js `transpilePackages`. There is no build output; `main` / `module` / `types` / `exports` point at `src/index.ts`.
@@ -34,6 +34,6 @@ Glyphs follow Zero's 24×24 spec (`src/glyphs.ts`). New marks flash-fill; instan
 
 ## Release
 
-Releases are **manual**. GitHub Actions → *release* → Run workflow → version `0.7.23` (no `v`). That type-checks and pushes tag `v0.7.23`.
+Releases are **manual**. GitHub Actions → *release* → Run workflow → version `0.7.24` (no `v`). That type-checks and pushes tag `v0.7.24`.
 
 Never push straight to `main`. Feature branch + PR.
