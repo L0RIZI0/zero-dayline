@@ -7,7 +7,6 @@ const NEW_MOON = Date.UTC(2000, 0, 6, 18, 14, 0);
 /** Mean time between lunar transits (~24h 50.5m). */
 const LUNAR_DAY = 24.841666 * HOUR;
 const TROPICAL_MONTH = 27.321661 * DAY;
-const SYNODIC = 29.530588853 * DAY;
 
 function clamp(n: number, a: number, b: number) {
   return Math.max(a, Math.min(b, n));
@@ -139,22 +138,46 @@ export function moonTimes(ms: number): { rise: number; set: number } {
   return { rise: p.rise, set: p.set };
 }
 
-/** 0 new → 0.25 first quarter → 0.5 full → 0.75 last quarter. */
+function solarNoon(ms: number): number {
+  const { rise, set } = sunTimes(ms);
+  return (rise + set) * 0.5;
+}
+
+/** Elongation vs the sun: 0 new (transit at solar noon), 0.5 full (transit at midnight). */
 export function moonPhase(t: number): number {
-  const u = (t - NEW_MOON) / SYNODIC;
+  const { transit } = moonPassage(t);
+  let u = (transit - solarNoon(transit)) / DAY;
   return u - Math.floor(u);
 }
 
-/** Synodic new/full instants in [tL, tR]. */
+function distNew(u: number) {
+  return Math.min(u, 1 - u);
+}
+function distFull(u: number) {
+  return Math.abs(u - 0.5);
+}
+
+/** Transits in [tL, tR] that are the local new or full (closest to noon / midnight). */
 export function moonPhaseEvents(tL: number, tR: number): { t: number; kind: "new" | "full" }[] {
   const out: { t: number; kind: "new" | "full" }[] = [];
-  const n0 = Math.floor((tL - NEW_MOON) / SYNODIC) - 1;
-  const n1 = Math.ceil((tR - NEW_MOON) / SYNODIC) + 1;
-  for (let n = n0; n <= n1; n++) {
-    const neu = NEW_MOON + n * SYNODIC;
-    const full = neu + SYNODIC * 0.5;
-    if (neu >= tL && neu <= tR) out.push({ t: neu, kind: "new" });
-    if (full >= tL && full <= tR) out.push({ t: full, kind: "full" });
+  const k0 = moonKFloor(tL) - 2;
+  const k1 = moonKFloor(tR) + 2;
+  const rows: { t: number; phase: number }[] = [];
+  for (let k = k0; k <= k1; k++) {
+    const p = passageK(k);
+    rows.push({ t: p.transit, phase: moonPhase(p.transit) });
+  }
+  for (let i = 1; i < rows.length - 1; i++) {
+    const { t, phase } = rows[i];
+    if (t < tL || t > tR) continue;
+    const dN = distNew(phase);
+    if (dN <= 0.12 && dN < distNew(rows[i - 1].phase) && dN <= distNew(rows[i + 1].phase)) {
+      out.push({ t, kind: "new" });
+    }
+    const dF = distFull(phase);
+    if (dF <= 0.12 && dF < distFull(rows[i - 1].phase) && dF <= distFull(rows[i + 1].phase)) {
+      out.push({ t, kind: "full" });
+    }
   }
   return out;
 }
