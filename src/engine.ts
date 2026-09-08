@@ -57,8 +57,8 @@ ctx.fillRect(0, 0, width, this.height);
 const ly = this.lineY();
 const nowX = this.timeToX(this.now);
 this.drawNowWash(nowX, ly);
-if (this.showSun) this.drawSun(ly);
-if (this.showMoon) this.drawMoon(ly);
+if (this.sunVisA > .01) this.drawSun(ly);
+if (this.moonVisA > .01) this.drawMoon(ly);
 ctx.save();
 if (this.skyBleedPx > 0) {
 ctx.beginPath();
@@ -489,7 +489,7 @@ ctx.fillText(set, x + 8 + icon + gap, y2);
 ctx.restore();
 }
 drawMoonZenith() {
-if (this.skyK() < 0.15) return;
+if (this.skyK() < 0.15 || this.moonVisA < .2) return;
 const t = this.xToTime(this.cursorX);
 const p = moonPassage(t);
 const cands = [p, moonPassage(p.rise - 1), moonPassage(p.set + 1)];

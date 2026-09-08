@@ -64,6 +64,11 @@ if (!this.moonHover && this.moonHoverA < .012) {
 this.moonHoverA = 0;
 this.hoverMoon = null;
 }
+const kVis = this.reducedMotion ? 22 : 3.4;
+this.sunVisA += ((this.showSun ? 1 : 0) - this.sunVisA) * expDamp(kVis, dt);
+this.moonVisA += ((this.showMoon ? 1 : 0) - this.moonVisA) * expDamp(kVis, dt);
+if (!this.showSun && this.sunVisA < .01) this.sunVisA = 0;
+if (!this.showMoon && this.moonVisA < .01) this.moonVisA = 0;
 if (this.springing) {
 const k = this.reducedMotion ? 240 : 78;
 const d = this.reducedMotion ? 32 : 15.5;
