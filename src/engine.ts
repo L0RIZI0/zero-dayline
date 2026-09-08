@@ -4,8 +4,8 @@ import type { CalEvent, PlacedChip } from "./types";
 import { C, colorOf, FONT_DISPLAY, FONT_MONO, FONT_UI, inkOn } from "./theme";
 import { clamp, formatHm, formatRange, lerp, smoothstep, DAY } from "./time";
 import { drawGlyph, type GlyphDrawFlags } from "./glyphDraw";
-import { drawHorizonSun, drawHorizonMoon, drawMoonPhase, roundRect } from "./engine-util";
-import { sunRgb, rgbCss, moonPassage, moonPhase, moonEval } from "./sun";
+import { drawHorizonSun, drawHorizonMoon, roundRect } from "./engine-util";
+import { sunRgb, rgbCss, moonPassage } from "./sun";
 
 export class DaylineEngine extends EngineDraw {
 constructor(canvas: HTMLCanvasElement, host: import("./engine-core").EngineHost, opts: import("./engine-core").EngineOptions = {}) {
@@ -503,18 +503,7 @@ bestD = d;
 best = c;
 }
 }
-const zx = this.timeToX(best.transit);
-if (zx < -24 || zx > this.width + 24) return;
-const k = this.skyK();
-const h = moonEval(best.transit).h * k;
-const zy = this.skyY(this.lineY(), best.transit, zx, h);
 const a = smoothstep(this.moonHoverA);
-const r = lerp(5.5, 7.5, a);
-const cy = Math.max(r + 4, zy - r - 4);
-const { ctx } = this;
-ctx.save();
-ctx.globalAlpha = a;
-drawMoonPhase(ctx, zx, cy, r, moonPhase(best.transit));
-ctx.restore();
+this.paintMoonAt(best.transit, lerp(5.5, 7.5, a), a);
 }
 }
