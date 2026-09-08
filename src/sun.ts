@@ -145,6 +145,20 @@ export function moonPhase(t: number): number {
   return u - Math.floor(u);
 }
 
+/** Synodic new/full instants in [tL, tR]. */
+export function moonPhaseEvents(tL: number, tR: number): { t: number; kind: "new" | "full" }[] {
+  const out: { t: number; kind: "new" | "full" }[] = [];
+  const n0 = Math.floor((tL - NEW_MOON) / SYNODIC) - 1;
+  const n1 = Math.ceil((tR - NEW_MOON) / SYNODIC) + 1;
+  for (let n = n0; n <= n1; n++) {
+    const neu = NEW_MOON + n * SYNODIC;
+    const full = neu + SYNODIC * 0.5;
+    if (neu >= tL && neu <= tR) out.push({ t: neu, kind: "new" });
+    if (full >= tL && full <= tR) out.push({ t: full, kind: "full" });
+  }
+  return out;
+}
+
 function moonPair(t: number) {
   let k = moonKFloor(t);
   let p = passageK(k);

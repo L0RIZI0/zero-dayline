@@ -4,7 +4,7 @@ import { C, colorOf, FONT_DISPLAY, FONT_MONO, FONT_UI, LABEL_TRACK } from "./the
 import { clamp, formatHm, formatRange, lerp, smoothstep, DAY } from "./time";
 import { coilUnit } from "./ticks";
 import { unitApproxMs, floorTo, addUnit } from "./time";
-import { seasonSigned, sunTimes, sunEval, moonEval, sunKnots, moonKnots, moonTimes, moonPassage, moonPhase, sunRgb, rgbCss, SUN_GOLD } from "./sun";
+import { seasonSigned, sunTimes, sunEval, moonEval, sunKnots, moonKnots, moonTimes, moonPassage, moonPhase, moonPhaseEvents, sunRgb, rgbCss, SUN_GOLD } from "./sun";
 import { drawHorizonSun, drawMoonPhase, roundRect } from "./engine-util";
 import { lensAmpForSpan } from "./warp";
 
@@ -266,17 +266,11 @@ ctx.restore();
 }
 drawMoonNewFull() {
 if (this.skyK() < 0.15) return;
-const tL = this.tLeft() - DAY;
-const tR = this.tRight() + DAY;
-let p = moonPassage(tL);
-if (p.transit > tL) p = moonPassage(p.rise - 1);
-let guard = 0;
-while (p.transit < tR && guard++ < 60) {
-const u = moonPhase(p.transit);
-const neu = u < 0.038 || u > 0.962;
-const full = Math.abs(u - 0.5) < 0.038;
-if (neu || full) this.paintMoonAt(p.transit, 6, 0.9);
-p = moonPassage(p.set + 1);
+const tL = this.tLeft() - 2 * DAY;
+const tR = this.tRight() + 2 * DAY;
+for (const e of moonPhaseEvents(tL, tR)) {
+const p = moonPassage(e.t);
+this.paintMoonAt(p.transit, 6, 0.95);
 }
 }
 drawCoil(ly: number) {
