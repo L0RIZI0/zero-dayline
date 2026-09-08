@@ -51,7 +51,11 @@ export function drawHorizonSun(
 	}
 	ctx.restore();
 }
-/** Spherical moon. `phase` 0 new, 0.5 full, waxing is right-lit. */
+/** Spherical moon. `phase` 0 new, 0.5 full, waxing is right-lit.
+ *  Opaque on a scratch canvas, then blitted — globalAlpha on terminator
+ *  fills otherwise reads as a quarter-moon. */
+let _moonOff: HTMLCanvasElement | null = null;
+
 export function drawMoonPhase(
 	ctx: CanvasRenderingContext2D,
 	cx: number,
@@ -60,45 +64,61 @@ export function drawMoonPhase(
 	phase: number,
 	lit = "rgb(214,224,242)",
 	shade = "rgb(36,42,58)",
+	alpha = 1,
 ) {
+	const pad = 2;
+	const size = Math.ceil((r + pad) * 2);
+	if (!_moonOff || _moonOff.width < size) {
+		_moonOff = document.createElement("canvas");
+		_moonOff.width = size;
+		_moonOff.height = size;
+	}
+	const sctx = _moonOff.getContext("2d");
+	if (!sctx) return;
+	sctx.setTransform(1, 0, 0, 1, 0, 0);
+	sctx.clearRect(0, 0, _moonOff.width, _moonOff.height);
+	sctx.save();
+	sctx.translate(size / 2, size / 2);
 	const u = ((phase % 1) + 1) % 1;
 	const s = Math.cos(u * Math.PI * 2);
-	ctx.save();
-	ctx.translate(cx, cy);
-	ctx.beginPath();
-	ctx.arc(0, 0, r, 0, Math.PI * 2);
-	ctx.fillStyle = shade;
-	ctx.fill();
-	ctx.save();
-	ctx.beginPath();
-	ctx.arc(0, 0, r, 0, Math.PI * 2);
-	ctx.clip();
-	ctx.fillStyle = lit;
+	sctx.beginPath();
+	sctx.arc(0, 0, r, 0, Math.PI * 2);
+	sctx.fillStyle = shade;
+	sctx.fill();
+	sctx.save();
+	sctx.beginPath();
+	sctx.arc(0, 0, r, 0, Math.PI * 2);
+	sctx.clip();
+	sctx.fillStyle = lit;
 	if (u <= 0.5) {
-		ctx.beginPath();
-		ctx.arc(0, 0, r, -Math.PI / 2, Math.PI / 2, false);
-		ctx.closePath();
-		ctx.fill();
-		ctx.beginPath();
-		ctx.ellipse(0, 0, Math.abs(s) * r, r, 0, 0, Math.PI * 2);
-		ctx.fillStyle = s > 0 ? shade : lit;
-		ctx.fill();
+		sctx.beginPath();
+		sctx.arc(0, 0, r, -Math.PI / 2, Math.PI / 2, false);
+		sctx.closePath();
+		sctx.fill();
+		sctx.beginPath();
+		sctx.ellipse(0, 0, Math.abs(s) * r, r, 0, 0, Math.PI * 2);
+		sctx.fillStyle = s > 0 ? shade : lit;
+		sctx.fill();
 	} else {
-		ctx.beginPath();
-		ctx.arc(0, 0, r, Math.PI / 2, -Math.PI / 2, false);
-		ctx.closePath();
-		ctx.fill();
-		ctx.beginPath();
-		ctx.ellipse(0, 0, Math.abs(s) * r, r, 0, 0, Math.PI * 2);
-		ctx.fillStyle = s < 0 ? lit : shade;
-		ctx.fill();
+		sctx.beginPath();
+		sctx.arc(0, 0, r, Math.PI / 2, -Math.PI / 2, false);
+		sctx.closePath();
+		sctx.fill();
+		sctx.beginPath();
+		sctx.ellipse(0, 0, Math.abs(s) * r, r, 0, 0, Math.PI * 2);
+		sctx.fillStyle = s < 0 ? lit : shade;
+		sctx.fill();
 	}
-	ctx.restore();
-	ctx.beginPath();
-	ctx.arc(0, 0, r - 0.4, 0, Math.PI * 2);
-	ctx.strokeStyle = "rgba(210,224,245,0.85)";
-	ctx.lineWidth = 1.15;
-	ctx.stroke();
+	sctx.restore();
+	sctx.beginPath();
+	sctx.arc(0, 0, r - 0.4, 0, Math.PI * 2);
+	sctx.strokeStyle = "rgba(210,224,245,0.85)";
+	sctx.lineWidth = 1.15;
+	sctx.stroke();
+	sctx.restore();
+	ctx.save();
+	ctx.globalAlpha = alpha;
+	ctx.drawImage(_moonOff, 0, 0, size, size, cx - size / 2, cy - size / 2, size, size);
 	ctx.restore();
 }
 export function drawCrescent(
