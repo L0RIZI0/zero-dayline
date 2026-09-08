@@ -125,6 +125,7 @@ emit(): void;
 setAnchor(t: number, x: number): void;
 noteGesture(x: number): void;
 springTo(center: number, span: number): void;
+goToNow(): void;
 panBy(dx: number): void;
 bounds(): { min: number; max: number };
 pushUndo(): void;
@@ -256,6 +257,8 @@ moonVisA = 0;
 persistEvents = true;
 clockMode: "wall" | "data" = "wall";
 nowRestFraction = 0.5;
+/** Keep `now` parked at nowRestFraction until the user pans. */
+followNow = true;
 callbacks: DaylineCallbacks = {};
 bootData: DaylineData | null = null;
 pendingData: DaylineData | null = null;
@@ -352,11 +355,20 @@ nowLens: this.nowLensOn
 this.emit();
 }
 goToNow() {
+this.followNow = true;
+this.flickT = null;
+this.flickV = 0;
+this.coastPx = 0;
+this.slidePx = 0;
+this.slideZoomLog = 0;
 const restX = this.width * this.nowRestFraction;
 this.noteGesture(restX);
 const span = clamp(this.spanMs, 8 * HOUR, 8 * DAY);
 const center = this.now - (this.nowRestFraction - 0.5) * span;
 this.springTo(center, span);
+}
+breakFollowNow() {
+this.followNow = false;
 }
 jumpSpan(spanMs: number) {
 this.noteGesture(this.width / 2);
@@ -368,6 +380,7 @@ this.noteGesture(this.width / 2);
 this.springTo((min + max) / 2, clamp(max - min, MIN_SPAN_MS, MAX_SPAN_MS));
 }
 panPixels(dx: number) {
+this.followNow = false;
 this.springing = false;
 this.coastPx = 0;
 this.slidePx = 0;

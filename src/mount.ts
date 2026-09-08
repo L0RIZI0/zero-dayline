@@ -29,6 +29,7 @@ export const mountDayline: MountDayline = (args: MountDaylineArgs): DaylineHandl
     setTheme: (theme) => engine.setContractTheme(theme),
     resize: (width, height) => engine.resizeTo(width, height),
     destroy: () => engine.destroy(),
+    goToNow: () => engine.goToNow(),
   };
 };
 
