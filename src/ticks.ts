@@ -1,5 +1,5 @@
 import type { TickMark, TickUnit } from "./types";
-import { addUnit, clamp, floorTo, formatTickLabel, unitApproxMs } from "./time";
+import { addUnit, floorTo, formatTickLabel, unitApproxMs } from "./time";
 
 type Level = { unit: TickUnit; step: number; major: boolean; label: boolean };
 export type LabelLane = "year" | "month" | "day" | "time";
@@ -73,38 +73,44 @@ export function buildTicks(
       let x = xTick;
       let vis0 = 0;
       let vis1 = 0;
+      let xDay0 = xTick;
+      let xDay1 = xTick;
       if (isDay) {
-        const xDay0 = xTick;
-        const xDay1 = timeToX(t + approx);
+        xDay0 = xTick;
+        xDay1 = timeToX(t + approx);
         vis0 = Math.max(xDay0, 0);
         vis1 = Math.min(xDay1, width);
-        x = vis1 > vis0 ? (vis0 + vis1) * 0.5 : xTick;
+        const trueX = (xDay0 + xDay1) * 0.5;
+        const visPx = vis1 - vis0;
+        // Zoomed in past one day filling the view: park in the remaining slice.
+        // Otherwise pin to the day's real center so the name slides off the edge.
+        x = (trueX < 0 || trueX > width) && visPx > width * 0.4
+          ? (vis0 + vis1) * 0.5
+          : trueX;
       }
-      if (xTick >= -80 && xTick <= width + 80 || isDay && vis1 > vis0) {
-        const localPx = Math.abs(timeToX(t + approx) - xTick);
+      if (xTick >= -80 && xTick <= width + 80 || isDay && vis1 > vis0 || isDay && x > -120 && x < width + 120) {
+        const localPx = isDay ? Math.abs(xDay1 - xDay0) : Math.abs(timeToX(t + approx) - xTick);
         const room = level.major ? 7 : 3.5;
-        if (localPx >= room || isDay && vis1 - vis0 >= 24) {
+        if (localPx >= room || isDay) {
           const tooCloseMajor = !isDay && usedMajorX.some((mx) => Math.abs(mx - xTick) < 6);
           if (!tooCloseMajor) {
             let label: string | undefined;
             let labelWidth = 0;
             const minPx = labelMinPx(level.unit, spanMs);
-            const onCanvas = x > 0 && x < width;
-            const labelOk = isDay
-              ? vis1 - vis0 >= 28 && onCanvas
-              : level.label && localPx >= minPx && x > 8 && x < width - 8;
-            if (labelOk) {
+            if (level.label && (isDay || localPx >= minPx)) {
               const text = formatTickLabel(t, level.unit, spanMs);
               const w = measure(text);
               const pad = lane === "time" ? 5 : 7;
               const half = w * 0.5 + pad;
-              x = clamp(x, half + 2, width - half - 2);
-              const x0 = x - half;
-              const x1 = x + half;
-              if (!collides(lane, x0, x1)) {
-                label = text;
-                labelWidth = w;
-                usedLabel[lane].push({ x0, x1 });
+              const overlaps = x + w * 0.5 > -2 && x - w * 0.5 < width + 2;
+              if (overlaps) {
+                const x0 = x - half;
+                const x1 = x + half;
+                if (!collides(lane, x0, x1)) {
+                  label = text;
+                  labelWidth = w;
+                  usedLabel[lane].push({ x0, x1 });
+                }
               }
             }
             if (isDay) {
