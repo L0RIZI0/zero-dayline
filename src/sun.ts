@@ -150,6 +150,22 @@ export function moonPhase(t: number): number {
   return u - Math.floor(u);
 }
 
+const PHASE_NAMES = [
+  "New Moon",
+  "Waxing Crescent",
+  "First Quarter",
+  "Waxing Gibbous",
+  "Full Moon",
+  "Waning Gibbous",
+  "Third Quarter",
+  "Waning Crescent",
+] as const;
+
+/** NASA eight-phase name for the passage containing `t`. */
+export function moonPhaseName(t: number): string {
+  return PHASE_NAMES[Math.round(moonPhase(t) * 8) % 8];
+}
+
 function distNew(u: number) {
   return Math.min(u, 1 - u);
 }
