@@ -4,8 +4,8 @@ import type { CalEvent, PlacedChip } from "./types";
 import { C, colorOf, FONT_DISPLAY, FONT_MONO, FONT_UI, inkOn } from "./theme";
 import { clamp, formatHm, formatRange, lerp, smoothstep, DAY } from "./time";
 import { drawGlyph, type GlyphDrawFlags } from "./glyphDraw";
-import { drawHorizonSun, drawHorizonMoon, roundRect } from "./engine-util";
-import { sunRgb, rgbCss, moonPassage, moonPhaseName } from "./sun";
+import { drawHorizonSun, drawHorizonMoon, drawMoonPhase, roundRect } from "./engine-util";
+import { sunRgb, rgbCss, moonPhase, moonPhaseName } from "./sun";
 
 export class DaylineEngine extends EngineDraw {
 constructor(canvas: HTMLCanvasElement, host: import("./engine-core").EngineHost, opts: import("./engine-core").EngineOptions = {}) {
@@ -321,7 +321,7 @@ ctx.restore();
 drawHoverTip() {
 this.ctx.letterSpacing = "0px";
 if (this.sunHoverA > .012 && this.hoverSun) this.drawSunCursor(this.hoverSun.px, this.hoverSun.py);
-if (this.moonHoverA > .012 && this.hoverMoon) this.drawMoonZenith();
+if (this.moonHoverA > .012 && this.hoverMoon) this.drawMoonCursor();
 if (this.mode === "none" && this.sunHover && this.hoverSun && !this.hoverId) {
 this.drawSunTip();
 return;
@@ -495,22 +495,17 @@ drawHorizonMoon(ctx, x + 8, y2, icon, "set", C.muted);
 ctx.fillText(set, x + 8 + icon + gap, y2);
 ctx.restore();
 }
-drawMoonZenith() {
+drawMoonCursor() {
 if (this.skyK() < 0.15 || this.moonVisA < .2) return;
-const t = this.xToTime(this.cursorX);
-const p = moonPassage(t);
-const cands = [p, moonPassage(p.rise - 1), moonPassage(p.set + 1)];
-let best = p;
-let bestD = Infinity;
-for (const c of cands) {
-const x = this.timeToX(c.transit);
-const d = Math.abs(x - this.cursorX);
-if (d < bestD) {
-bestD = d;
-best = c;
-}
-}
+const moon = this.hoverMoon;
+if (!moon) return;
 const a = smoothstep(this.moonHoverA);
-this.paintMoonAt(best.transit, lerp(5.5, 7.5, a), a);
+const r = lerp(5.5, 7.5, a);
+const s = 1.45;
+const p = a - 1;
+const pop = p * p * ((s + 1) * p + s) + 1;
+const cx = moon.px;
+const cy = moon.py - r - 4 + (1 - pop) * 9;
+drawMoonPhase(this.ctx, cx, cy, r, moonPhase(this.xToTime(this.cursorX)), undefined, undefined, a);
 }
 }
