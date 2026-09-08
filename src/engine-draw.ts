@@ -4,8 +4,8 @@ import { C, colorOf, FONT_DISPLAY, FONT_MONO, FONT_UI, LABEL_TRACK } from "./the
 import { clamp, formatHm, formatRange, lerp, smoothstep, DAY } from "./time";
 import { coilUnit } from "./ticks";
 import { unitApproxMs, floorTo, addUnit } from "./time";
-import { seasonSigned, sunTimes, sunEval, moonEval, sunKnots, moonKnots, moonTimes, sunRgb, rgbCss, SUN_GOLD } from "./sun";
-import { drawHorizonSun, roundRect } from "./engine-util";
+import { seasonSigned, sunTimes, sunEval, moonEval, sunKnots, moonKnots, moonTimes, moonPassage, moonPhase, sunRgb, rgbCss, SUN_GOLD } from "./sun";
+import { drawHorizonSun, drawMoonPhase, roundRect } from "./engine-util";
 import { lensAmpForSpan } from "./warp";
 
 type SkyKnot = { t: number; x: number; y: number; dx: number; dy: number };
@@ -250,6 +250,34 @@ ly,
 strokeA,
 !this.skyBusy(),
 );
+this.drawMoonNewFull();
+}
+paintMoonAt(transit: number, r: number, alpha: number) {
+const zx = this.timeToX(transit);
+if (zx < -16 || zx > this.width + 16) return;
+const k = this.skyK();
+const zy = this.skyY(this.lineY(), transit, zx, moonEval(transit).h * k);
+const cy = Math.max(r + 4, zy - r - 4);
+const { ctx } = this;
+ctx.save();
+ctx.globalAlpha = alpha;
+drawMoonPhase(ctx, zx, cy, r, moonPhase(transit));
+ctx.restore();
+}
+drawMoonNewFull() {
+if (this.skyK() < 0.15) return;
+const tL = this.tLeft() - DAY;
+const tR = this.tRight() + DAY;
+let p = moonPassage(tL);
+if (p.transit > tL) p = moonPassage(p.rise - 1);
+let guard = 0;
+while (p.transit < tR && guard++ < 60) {
+const u = moonPhase(p.transit);
+const neu = u < 0.038 || u > 0.962;
+const full = Math.abs(u - 0.5) < 0.038;
+if (neu || full) this.paintMoonAt(p.transit, 6, 0.9);
+p = moonPassage(p.set + 1);
+}
 }
 drawCoil(ly: number) {
 const { ctx, width, spanMs } = this;
