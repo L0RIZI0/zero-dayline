@@ -410,10 +410,13 @@ else hi = mid;
 return (lo + hi) / 2;
 }
 setAnchor(t: number, x: number) {
+this.centerT = this.centerForAnchor(t, x, this.spanMs);
+this.mapDirty = true;
+}
+centerForAnchor(t: number, x: number, span: number) {
 if (this.mapDirty) this.prepareMap();
-const span = this.spanMs;
 const wt = this.W(t);
-const width = this.width;
+const width = Math.max(this.width, 1);
 let lo = t - span * 4;
 let hi = t + span * 4;
 for (let i = 0; i < 18; i++) {
@@ -425,8 +428,7 @@ if (mx > x) lo = mid;
 else hi = mid;
 }
 const c = (lo + hi) / 2;
-this.centerT = Number.isFinite(c) ? c : this.centerT;
-this.mapDirty = true;
+return Number.isFinite(c) ? c : this.centerT;
 }
 zoomAt(x: number, factor: number, coast = true) {
 const t = this.xToTime(x);

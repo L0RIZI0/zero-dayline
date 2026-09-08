@@ -123,6 +123,7 @@ draw(): void;
 layout(): import("./types").PlacedChip[];
 emit(): void;
 setAnchor(t: number, x: number): void;
+centerForAnchor(t: number, x: number, span: number): number;
 noteGesture(x: number): void;
 springTo(center: number, span: number): void;
 goToNow(): void;
@@ -364,7 +365,7 @@ this.slideZoomLog = 0;
 const restX = this.width * this.nowRestFraction;
 this.noteGesture(restX);
 const span = clamp(this.spanMs, 8 * HOUR, 8 * DAY);
-const center = this.now - (this.nowRestFraction - 0.5) * span;
+const center = this.centerForAnchor(this.now, restX, span);
 this.springTo(center, span);
 }
 breakFollowNow() {
