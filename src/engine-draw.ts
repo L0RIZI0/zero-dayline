@@ -43,7 +43,7 @@ return this.hitSky(x, y, (t) => v * moonEval(t).h * k, (t) => moonTimes(t), hove
 hitMoonIcon(x: number, y: number): { rise: number; set: number; px: number; py: number } | null {
 if (this.skyK() < 0.15 || this.moonVisA < .4) return null;
 const k = this.skyK();
-const r = 6;
+const r = 7.5;
 const tL = this.tLeft() - 2 * DAY;
 const tR = this.tRight() + 2 * DAY;
 for (const e of moonPhaseEvents(tL, tR)) {
@@ -51,8 +51,7 @@ const p = moonPassage(e.t);
 const zx = this.timeToX(p.transit);
 if (zx < -16 || zx > this.width + 16) continue;
 const zy = this.skyY(this.lineY(), p.transit, zx, moonEval(p.transit).h * k);
-const cy = Math.max(r + 4, zy - r - 4);
-if (Math.hypot(x - zx, y - cy) <= r + 5) return { rise: p.rise, set: p.set, px: zx, py: cy };
+if (Math.hypot(x - zx, y - zy) <= r + 5) return { rise: p.rise, set: p.set, px: zx, py: zy };
 }
 return null;
 }
@@ -281,8 +280,7 @@ const zx = this.timeToX(transit);
 if (zx < -16 || zx > this.width + 16) return;
 const k = this.skyK();
 const zy = this.skyY(this.lineY(), transit, zx, moonEval(transit).h * k);
-const cy = Math.max(r + 4, zy - r - 4);
-drawMoonPhase(this.ctx, zx, cy, r, moonPhase(transit), undefined, undefined, alpha);
+drawMoonPhase(this.ctx, zx, zy, r, moonPhase(transit), undefined, undefined, alpha);
 }
 drawMoonNewFull() {
 if (this.skyK() < 0.15 || this.moonVisA < .05) return;
@@ -292,7 +290,7 @@ const tL = this.tLeft() - 2 * DAY;
 const tR = this.tRight() + 2 * DAY;
 for (const e of moonPhaseEvents(tL, tR)) {
 const p = moonPassage(e.t);
-this.paintMoonAt(p.transit, 6, lerp(.26, 1, u) * v);
+this.paintMoonAt(p.transit, 7.5, lerp(.26, 1, u) * v);
 }
 }
 drawCoil(ly: number) {
