@@ -30,6 +30,7 @@ this.noteGesture(x);
 if (this.ptrs.size === 2) {
 const [a, b] = [...this.ptrs.values()];
 this.mode = "pinch";
+this.followNow = false;
 this.pinchDist0 = Math.hypot(a.x - b.x, a.y - b.y) || 1;
 this.pinchSpan0 = this.spanMs;
 this.pinchX = (a.x + b.x) / 2;
@@ -116,7 +117,10 @@ if (this.mode === "pan") {
 if (e.buttons === 0) return;
 this.sunHover = false;
 this.moonHover = false;
-if (Math.abs(x - this.grabX) > 3) this.moved = true;
+if (Math.abs(x - this.grabX) > 3) {
+this.moved = true;
+this.followNow = false;
+}
 this.setAnchor(this.grabT, x);
 this.noteGesture(x);
 this.pushVel(x);
@@ -278,6 +282,11 @@ this.wheelX = x;
 this.noteGesture(x);
 const notches = wheelNotches(e);
 if (e.ctrlKey || e.metaKey) {
+if (this.followNow) {
+const restX = this.width * this.nowRestFraction;
+this.wheelX = restX;
+this.noteGesture(restX);
+}
 let log: number;
 if (notches != null) log = notches * Math.log(1.055);
 else {
@@ -307,6 +316,7 @@ dx = raw * 2.35;
 }
 const cap = this.width * .05;
 this.slidePx += clamp(dx, -cap, cap);
+this.followNow = false;
 this.flickT = null;
 this.flickV = 0;
 this.coastPx = 0;
@@ -344,8 +354,13 @@ e.preventDefault();
 this.goToNow();
 } else if (e.key === "+" || e.key === "=") this.zoomAt(this.width / 2, .62);
 else if (e.key === "-" || e.key === "_") this.zoomAt(this.width / 2, 1.61);
-else if (e.key === "ArrowLeft") this.setAnchor(this.xToTime(this.width / 2), this.width / 2 + this.width * .08);
-else if (e.key === "ArrowRight") this.setAnchor(this.xToTime(this.width / 2), this.width / 2 - this.width * .08);
+else if (e.key === "ArrowLeft") {
+this.followNow = false;
+this.setAnchor(this.xToTime(this.width / 2), this.width / 2 + this.width * .08);
+} else if (e.key === "ArrowRight") {
+this.followNow = false;
+this.setAnchor(this.xToTime(this.width / 2), this.width / 2 - this.width * .08);
+}
 else if (e.key === "Delete" || e.key === "Backspace") this.deleteSelected();
 else if (e.key === "Escape") {
 this.selectedId = null;

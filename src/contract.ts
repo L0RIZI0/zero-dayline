@@ -117,6 +117,8 @@ export type DaylineHandle = {
   setTheme: (theme: DaylineTheme) => void;
   resize: (width: number, height: number) => void;
   destroy: () => void;
+  /** Spring now back to `nowRestFraction`. Re-enables now-follow. */
+  goToNow?: () => void;
 };
 
 export type MountDayline = (args: MountDaylineArgs) => DaylineHandle;

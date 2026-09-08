@@ -3,7 +3,7 @@
 Canvas dayline engine. Zero installs a **pinned tag**:
 
 ```json
-"@zero/dayline": "github:L0RIZI0/zero-dayline#v0.7.21"
+"@zero/dayline": "github:L0RIZI0/zero-dayline#v0.7.22"
 ```
 
 Add `@zero/dayline` to Next.js `transpilePackages`. There is no build output; `main` / `module` / `types` / `exports` point at `src/index.ts`.
@@ -22,6 +22,8 @@ const handle = mountDayline({
 
 `clock: "wall"` (default) means the engine owns `now`. Do not push a new timestamp from the host every second.
 
+`handle.goToNow()` springs `now` to `nowRestFraction` (same as <kbd>n</kbd> / Home). Until the user pans, `now` stays parked there and the band crawls left with wall time. A pan (drag, wheel, arrows) releases it; `goToNow` (or a remount) re-enables follow.
+
 `options.skyBleedPx` (default 0): extra transparent pixels below the band. Layout stays on `height - skyBleedPx`; only sun/moon strokes draw into the bleed. Size the `<canvas>` to `bandHeight + skyBleedPx` and overlay the bleed with `pointer-events: none`. Mount-time only.
 
 Sky: `data.sky = { sun?: boolean, moon?: boolean }` — sun defaults on, moon off. Drawn as Hermite cubics through rise/peak/set (no dense sampling). Hover is closed-form `y(t)`. Moon crosses the axis at moonrise/moonset.
@@ -32,6 +34,6 @@ Glyphs follow Zero's 24×24 spec (`src/glyphs.ts`). New marks flash-fill; instan
 
 ## Release
 
-Releases are **manual**. GitHub Actions → *release* → Run workflow → version `0.7.21` (no `v`). That type-checks and pushes tag `v0.7.21`.
+Releases are **manual**. GitHub Actions → *release* → Run workflow → version `0.7.22` (no `v`). That type-checks and pushes tag `v0.7.22`.
 
 Never push straight to `main`. Feature branch + PR.

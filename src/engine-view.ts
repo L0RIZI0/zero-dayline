@@ -113,6 +113,9 @@ this.flickV = 0;
 this.panBy(this.coastPx * dt);
 this.coastPx *= Math.exp(-2.55 * dt);
 if (Math.abs(this.coastPx) <= 12) this.coastPx = 0;
+} else if (this.followNow && this.width >= 16) {
+const restX = this.width * this.nowRestFraction;
+if (Math.abs(this.timeToX(this.now) - restX) > 0.15) this.setAnchor(this.now, restX);
 }
 if (Math.abs(this.zoomCoast) > .0012) {
 const factor = Math.exp(this.zoomCoast * (1 - Math.exp(-4.6 * dt)));
